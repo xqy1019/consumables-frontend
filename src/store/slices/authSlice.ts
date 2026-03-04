@@ -1,0 +1,56 @@
+import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+import type { LoginResponse } from '@/types'
+
+interface AuthState {
+  token: string | null
+  userId: number | null
+  username: string | null
+  realName: string | null
+  roles: string[]
+  isAuthenticated: boolean
+}
+
+const token = localStorage.getItem('token')
+const userStr = localStorage.getItem('user')
+let user: Partial<LoginResponse> = {}
+try { user = userStr ? JSON.parse(userStr) : {} } catch { user = {} }
+
+const initialState: AuthState = {
+  token,
+  userId: user.userId ?? null,
+  username: user.username ?? null,
+  realName: user.realName ?? null,
+  roles: user.roles ?? [],
+  isAuthenticated: !!token,
+}
+
+const authSlice = createSlice({
+  name: 'auth',
+  initialState,
+  reducers: {
+    setCredentials: (state, action: PayloadAction<LoginResponse>) => {
+      const { token, userId, username, realName, roles } = action.payload
+      state.token = token
+      state.userId = userId
+      state.username = username
+      state.realName = realName
+      state.roles = roles
+      state.isAuthenticated = true
+      localStorage.setItem('token', token)
+      localStorage.setItem('user', JSON.stringify(action.payload))
+    },
+    logout: (state) => {
+      state.token = null
+      state.userId = null
+      state.username = null
+      state.realName = null
+      state.roles = []
+      state.isAuthenticated = false
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+    },
+  },
+})
+
+export const { setCredentials, logout } = authSlice.actions
+export default authSlice.reducer

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import {
-  Table, Button, Space, Modal, Form, Input, message, Card, Row, Col,
-  Typography, Tag, Drawer, Descriptions, InputNumber, DatePicker, Select,
+  Table, Button, Space, Modal, Form, Input, message, Card, Row, Col, Tag, Drawer, Descriptions, InputNumber, DatePicker, Select,
 } from 'antd'
 import { PlusOutlined, EyeOutlined, CheckOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -10,7 +9,6 @@ import { materialsApi } from '@/api/materials'
 import { suppliersApi } from '@/api/system'
 import type { InquiryVO, InquiryItemVO, Material, Supplier } from '@/types'
 
-const { Title } = Typography
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   DRAFT: { label: '草稿', color: 'default' },
@@ -111,17 +109,16 @@ export default function InquiryPage() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col><Title level={4} style={{ margin: 0 }}>询价单管理</Title></Col>
-          <Col>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-              form.resetFields(); setCreateOpen(true)
-            }}>新建询价</Button>
-          </Col>
-        </Row>
-      </Card>
-      <Card bordered={false} style={{ borderRadius: 12 }}>
+      <Card
+        bordered={false}
+        className="rounded-xl"
+        title="询价单管理"
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+            form.resetFields(); setCreateOpen(true)
+          }}>新建询价</Button>
+        }
+      >
         <Table
           rowKey="id" columns={columns} dataSource={data} loading={loading} scroll={{ x: 1000 }}
           pagination={{
@@ -135,7 +132,7 @@ export default function InquiryPage() {
       <Modal title="新建询价单" open={createOpen}
         onCancel={() => setCreateOpen(false)} onOk={() => form.submit()}
         width={800} destroyOnClose>
-        <Form form={form} onFinish={handleCreate} layout="vertical" style={{ paddingTop: 8 }}>
+        <Form form={form} onFinish={handleCreate} layout="vertical" className="pt-2">
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="supplierId" label="供应商" rules={[{ required: true }]}>
@@ -146,7 +143,7 @@ export default function InquiryPage() {
             </Col>
             <Col span={12}>
               <Form.Item name="validDate" label="报价有效期">
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker className="w-full" />
               </Form.Item>
             </Col>
             <Col span={24}>
@@ -158,8 +155,8 @@ export default function InquiryPage() {
           <Form.List name="items">
             {(fields, { add, remove }) => (
               <>
-                <Row justify="space-between" align="middle" style={{ marginBottom: 8 }}>
-                  <Col><span style={{ fontWeight: 600 }}>询价明细</span></Col>
+                <Row justify="space-between" align="middle" className="mb-2">
+                  <Col><span className="font-semibold">询价明细</span></Col>
                   <Col><Button size="small" type="dashed" onClick={() => add()}>添加耗材</Button></Col>
                 </Row>
                 {fields.map(field => (
@@ -173,16 +170,16 @@ export default function InquiryPage() {
                     </Col>
                     <Col flex="1">
                       <Form.Item name={[field.name, 'quantity']} rules={[{ required: true }]}>
-                        <InputNumber min={1} placeholder="数量" style={{ width: '100%' }} />
+                        <InputNumber min={1} placeholder="数量" className="w-full" />
                       </Form.Item>
                     </Col>
                     <Col flex="1">
                       <Form.Item name={[field.name, 'quotedPrice']}>
-                        <InputNumber min={0} placeholder="报价" style={{ width: '100%' }} />
+                        <InputNumber min={0} placeholder="报价" className="w-full" />
                       </Form.Item>
                     </Col>
                     <Col>
-                      <Button danger size="small" onClick={() => remove(field.name)} style={{ marginTop: 4 }}>删除</Button>
+                      <Button danger size="small" onClick={() => remove(field.name)} className="mt-1">删除</Button>
                     </Col>
                   </Row>
                 ))}
@@ -198,7 +195,7 @@ export default function InquiryPage() {
       >
         {currentRecord && (
           <>
-            <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
+            <Descriptions bordered size="small" column={2} className="mb-4">
               <Descriptions.Item label="询价单号">{currentRecord.inquiryNo}</Descriptions.Item>
               <Descriptions.Item label="供应商">{currentRecord.supplierName}</Descriptions.Item>
               <Descriptions.Item label="报价有效期">{currentRecord.validDate}</Descriptions.Item>

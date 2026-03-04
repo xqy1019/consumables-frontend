@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import {
-  Table, Button, Space, Modal, Form, Input, message, Card, Row, Col,
-  Typography, Tag, Drawer, Descriptions, InputNumber, DatePicker, Select, Alert,
+  Table, Button, Space, Modal, Form, Input, message, Card, Row, Col, Tag, Drawer, Descriptions, InputNumber, DatePicker, Select, Alert,
 } from 'antd'
 import { PlusOutlined, EyeOutlined, PlayCircleOutlined, BulbOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -10,7 +9,6 @@ import { materialsApi } from '@/api/materials'
 import { suppliersApi } from '@/api/system'
 import type { ContractVO, ContractItemVO, AutoSuggestionVO, Material, Supplier } from '@/types'
 
-const { Title } = Typography
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   DRAFT: { label: '草稿', color: 'default' },
@@ -129,26 +127,25 @@ export default function ContractPage() {
     { title: '最低库存', dataIndex: 'minStock', width: 90 },
     { title: '最高库存', dataIndex: 'maxStock', width: 90 },
     { title: '建议采购量', dataIndex: 'suggestedQuantity', width: 100,
-      render: v => <span style={{ fontWeight: 600, color: '#1677ff' }}>{v}</span> },
+      render: v => <span className="font-semibold text-[#1677ff]">{v}</span> },
     { title: '预估金额', dataIndex: 'estimatedCost', width: 100, render: v => `¥${(v || 0).toLocaleString()}` },
   ]
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col><Title level={4} style={{ margin: 0 }}>采购合同管理</Title></Col>
-          <Col>
-            <Space>
-              <Button icon={<BulbOutlined />} onClick={loadSuggestions}>自动补货建议</Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-                form.resetFields(); setCreateOpen(true)
-              }}>新建合同</Button>
-            </Space>
-          </Col>
-        </Row>
-      </Card>
-      <Card bordered={false} style={{ borderRadius: 12 }}>
+      <Card
+        bordered={false}
+        className="rounded-xl"
+        title="采购合同管理"
+        extra={
+          <Space>
+            <Button icon={<BulbOutlined />} onClick={loadSuggestions}>自动补货建议</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+              form.resetFields(); setCreateOpen(true)
+            }}>新建合同</Button>
+          </Space>
+        }
+      >
         <Table
           rowKey="id" columns={columns} dataSource={data} loading={loading} scroll={{ x: 1100 }}
           pagination={{
@@ -163,7 +160,7 @@ export default function ContractPage() {
       <Modal title="新建采购合同" open={createOpen}
         onCancel={() => setCreateOpen(false)} onOk={() => form.submit()}
         width={800} destroyOnClose>
-        <Form form={form} onFinish={handleCreate} layout="vertical" style={{ paddingTop: 8 }}>
+        <Form form={form} onFinish={handleCreate} layout="vertical" className="pt-2">
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="supplierId" label="供应商" rules={[{ required: true }]}>
@@ -174,12 +171,12 @@ export default function ContractPage() {
             </Col>
             <Col span={12}>
               <Form.Item name="contractDate" label="合同日期" rules={[{ required: true }]}>
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker className="w-full" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="deliveryDate" label="交货日期">
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker className="w-full" />
               </Form.Item>
             </Col>
             <Col span={24}>
@@ -191,8 +188,8 @@ export default function ContractPage() {
           <Form.List name="items">
             {(fields, { add, remove }) => (
               <>
-                <Row justify="space-between" align="middle" style={{ marginBottom: 8 }}>
-                  <Col><span style={{ fontWeight: 600 }}>合同明细</span></Col>
+                <Row justify="space-between" align="middle" className="mb-2">
+                  <Col><span className="font-semibold">合同明细</span></Col>
                   <Col><Button size="small" type="dashed" onClick={() => add()}>添加耗材</Button></Col>
                 </Row>
                 {fields.map(field => (
@@ -206,16 +203,16 @@ export default function ContractPage() {
                     </Col>
                     <Col flex="1">
                       <Form.Item name={[field.name, 'quantity']} rules={[{ required: true }]}>
-                        <InputNumber min={1} placeholder="数量" style={{ width: '100%' }} />
+                        <InputNumber min={1} placeholder="数量" className="w-full" />
                       </Form.Item>
                     </Col>
                     <Col flex="1">
                       <Form.Item name={[field.name, 'unitPrice']} rules={[{ required: true }]}>
-                        <InputNumber min={0} placeholder="单价" style={{ width: '100%' }} />
+                        <InputNumber min={0} placeholder="单价" className="w-full" />
                       </Form.Item>
                     </Col>
                     <Col>
-                      <Button danger size="small" onClick={() => remove(field.name)} style={{ marginTop: 4 }}>删除</Button>
+                      <Button danger size="small" onClick={() => remove(field.name)} className="mt-1">删除</Button>
                     </Col>
                   </Row>
                 ))}
@@ -232,7 +229,7 @@ export default function ContractPage() {
       >
         {currentRecord && (
           <>
-            <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
+            <Descriptions bordered size="small" column={2} className="mb-4">
               <Descriptions.Item label="合同编号">{currentRecord.contractNo}</Descriptions.Item>
               <Descriptions.Item label="供应商">{currentRecord.supplierName}</Descriptions.Item>
               <Descriptions.Item label="合同日期">{currentRecord.contractDate}</Descriptions.Item>
@@ -256,7 +253,7 @@ export default function ContractPage() {
           <Alert type="success" message="当前库存充足，无需补货" showIcon />
         ) : (
           <>
-            <Alert type="warning" message={`发现 ${suggestions.length} 种耗材需要补货`} showIcon style={{ marginBottom: 12 }} />
+            <Alert type="warning" message={`发现 ${suggestions.length} 种耗材需要补货`} showIcon className="mb-3" />
             <Table rowKey="materialId" columns={suggestColumns} dataSource={suggestions} pagination={false} scroll={{ x: 800 }} />
           </>
         )}

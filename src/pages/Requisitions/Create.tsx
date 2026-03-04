@@ -58,14 +58,14 @@ export default function CreateRequisition() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
+      <Card bordered={false} className="rounded-xl mb-4">
         <Space>
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/requisitions')}>返回</Button>
-          <Title level={4} style={{ margin: 0 }}>发起耗材申领</Title>
+          <Title level={4} className="!m-0">发起耗材申领</Title>
         </Space>
       </Card>
 
-      <Card bordered={false} style={{ borderRadius: 12 }}>
+      <Card bordered={false} className="rounded-xl">
         <Form form={form} onFinish={handleSubmit} layout="vertical">
           <Row gutter={24}>
             <Col span={8}>
@@ -77,7 +77,7 @@ export default function CreateRequisition() {
             </Col>
             <Col span={8}>
               <Form.Item name="requiredDate" label="需求日期">
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker className="w-full" />
               </Form.Item>
             </Col>
             <Col span={8}>
@@ -97,7 +97,7 @@ export default function CreateRequisition() {
               {
                 title: '耗材', width: 280,
                 render: (_, record) => (
-                  <Select showSearch style={{ width: '100%' }}
+                  <Select showSearch className="w-full"
                     value={record.materialId}
                     placeholder="选择耗材"
                     onChange={(v) => updateItem(record.key, 'materialId', v)}
@@ -113,7 +113,7 @@ export default function CreateRequisition() {
               {
                 title: '申领数量', width: 130,
                 render: (_, record) => (
-                  <InputNumber min={1} style={{ width: '100%' }} value={record.quantity}
+                  <InputNumber min={1} className="w-full" value={record.quantity}
                     onChange={(v) => updateItem(record.key, 'quantity', v)} />
                 ),
               },
@@ -136,7 +136,7 @@ export default function CreateRequisition() {
           />
 
           <Button type="dashed" icon={<PlusOutlined />} onClick={addItem}
-            style={{ width: '100%', margin: '16px 0' }}>
+            className="w-full my-4">
             添加耗材
           </Button>
 

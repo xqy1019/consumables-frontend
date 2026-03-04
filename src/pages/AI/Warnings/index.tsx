@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import {
-  Table, Card, Row, Col, Typography, Tag, Tabs, Badge, Alert, Statistic, Space,
+  Table, Card, Row, Col, Tag, Tabs, Badge, Alert, Statistic, Space,
 } from 'antd'
 import {
   WarningOutlined, ClockCircleOutlined, ExclamationCircleOutlined,
@@ -9,7 +9,6 @@ import type { ColumnsType } from 'antd/es/table'
 import { aiApi } from '@/api/ai'
 import type { WarningVO } from '@/types'
 
-const { Title } = Typography
 
 const LEVEL_MAP: Record<string, { label: string; color: string }> = {
   HIGH: { label: '高危', color: 'error' },
@@ -56,11 +55,11 @@ export default function WarningsPage() {
     { title: '预警信息', dataIndex: 'message', ellipsis: true },
     {
       title: '当前值', dataIndex: 'currentValue', width: 90,
-      render: v => <span style={{ fontWeight: 600 }}>{v}</span>,
+      render: v => <span className="font-semibold">{v}</span>,
     },
     {
       title: '阈值', dataIndex: 'threshold', width: 90,
-      render: v => <span style={{ color: '#ff4d4f' }}>{v}</span>,
+      render: v => <span className="text-[#ff4d4f]">{v}</span>,
     },
     {
       title: '剩余天数', dataIndex: 'daysLeft', width: 90,
@@ -89,33 +88,28 @@ export default function WarningsPage() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col><Title level={4} style={{ margin: 0 }}>预警中心</Title></Col>
-        </Row>
-      </Card>
 
       {highCount > 0 && (
         <Alert
           type="error"
           icon={<ExclamationCircleOutlined />}
           message={`当前有 ${highCount} 条高危预警需要立即处理`}
-          showIcon banner style={{ marginBottom: 16, borderRadius: 8 }}
+          showIcon banner className="mb-4 rounded-lg"
         />
       )}
 
-      <Row gutter={16} style={{ marginBottom: 16 }}>
+      <Row gutter={16} className="mb-4">
         <Col span={6}>
-          <Card bordered={false} style={{ borderRadius: 12 }}>
+          <Card bordered={false} className="rounded-xl">
             <Statistic
               title="全部预警"
               value={warnings.length}
-              prefix={<WarningOutlined style={{ color: '#faad14' }} />}
+              prefix={<WarningOutlined className="text-[#faad14]" />}
             />
           </Card>
         </Col>
         <Col span={6}>
-          <Card bordered={false} style={{ borderRadius: 12 }}>
+          <Card bordered={false} className="rounded-xl">
             <Statistic
               title="高危预警"
               value={highCount}
@@ -125,7 +119,7 @@ export default function WarningsPage() {
           </Card>
         </Col>
         <Col span={6}>
-          <Card bordered={false} style={{ borderRadius: 12 }}>
+          <Card bordered={false} className="rounded-xl">
             <Statistic
               title="中危预警"
               value={medCount}
@@ -135,7 +129,7 @@ export default function WarningsPage() {
           </Card>
         </Col>
         <Col span={6}>
-          <Card bordered={false} style={{ borderRadius: 12 }}>
+          <Card bordered={false} className="rounded-xl">
             <Statistic
               title="短缺预警"
               value={shortageWarnings.length}
@@ -146,7 +140,7 @@ export default function WarningsPage() {
         </Col>
       </Row>
 
-      <Card bordered={false} style={{ borderRadius: 12 }}>
+      <Card bordered={false} className="rounded-xl">
         <Tabs items={tabItems} />
       </Card>
     </div>

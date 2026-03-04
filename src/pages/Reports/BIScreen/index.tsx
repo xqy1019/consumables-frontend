@@ -103,7 +103,7 @@ export default function BIScreenPage() {
   const deptColumns = [
     {
       title: '排名', dataIndex: 'rank', width: 50,
-      render: (v: number) => <span style={{ fontWeight: v <= 3 ? 700 : 400 }}>#{v}</span>,
+      render: (v: number) => <span className={v <= 3 ? 'font-bold' : 'font-normal'}>#{v}</span>,
     },
     { title: '科室', dataIndex: 'deptName', render: (v: string, r: any) => v || `科室${r.deptId}` },
     { title: '消耗量', dataIndex: 'totalQuantity' },
@@ -111,23 +111,23 @@ export default function BIScreenPage() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
+      <Card bordered={false} className="rounded-xl mb-4">
         <Row justify="space-between" align="middle">
           <Col>
             <Space>
-              <DashboardOutlined style={{ fontSize: 20, color: '#1677ff' }} />
-              <Title level={4} style={{ margin: 0 }}>BI 智能大屏</Title>
+              <DashboardOutlined className="text-xl text-[#1677ff]" />
+              <Title level={4} className="!m-0">BI 智能大屏</Title>
             </Space>
           </Col>
           <Col>
-            <ReloadOutlined style={{ cursor: 'pointer', color: '#1677ff' }} onClick={fetchData} spin={loading} />
+            <ReloadOutlined className="cursor-pointer text-[#1677ff]" onClick={fetchData} spin={loading} />
           </Col>
         </Row>
       </Card>
 
       <Spin spinning={loading}>
         {/* 核心指标 */}
-        <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Row gutter={16} className="mb-4">
           {[
             { title: '库存总价值', value: data?.totalInventoryValue, prefix: '¥', color: '#1677ff', icon: <DatabaseOutlined /> },
             { title: '库存品种数', value: data?.totalInventoryItems, color: '#52c41a', icon: <DatabaseOutlined /> },
@@ -135,8 +135,8 @@ export default function BIScreenPage() {
             { title: '库存不足', value: data?.lowStockCount, color: '#ff4d4f', icon: <WarningOutlined />, suffix: '种' },
             { title: '待执行采购', value: data?.pendingPurchase, color: '#722ed1', icon: <ShoppingCartOutlined />, suffix: '单' },
           ].map((item, i) => (
-            <Col span={24 / 5} key={i}>
-              <Card bordered={false} style={{ borderRadius: 12 }}>
+            <Col xs={12} lg={4} key={i}>
+              <Card bordered={false} className="rounded-xl">
                 <Statistic
                   title={item.title}
                   value={item.value ?? '--'}
@@ -150,42 +150,43 @@ export default function BIScreenPage() {
         </Row>
 
         {/* AI 预测准确率 */}
-        <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Row gutter={16} className="mb-4">
           <Col span={6}>
-            <Card bordered={false} style={{ borderRadius: 12, height: '100%' }}>
-              <Space direction="vertical" style={{ width: '100%' }}>
+            <Card bordered={false} className="rounded-xl h-full">
+              <Space direction="vertical" className="w-full">
                 <Space>
-                  <RobotOutlined style={{ color: '#1677ff', fontSize: 18 }} />
-                  <span style={{ fontWeight: 600 }}>AI 预测准确率</span>
+                  <RobotOutlined className="text-[#1677ff] text-lg" />
+                  <span className="font-semibold">AI 预测准确率</span>
                 </Space>
-                <Progress
-                  type="circle"
-                  percent={parseFloat(String(data?.predictionAccuracy || 0))}
-                  format={v => `${v}%`}
-                  strokeColor={{
-                    '0%': '#108ee9',
-                    '100%': '#87d068',
-                  }}
-                  style={{ display: 'flex', justifyContent: 'center' }}
-                />
+                <div className="flex justify-center">
+                  <Progress
+                    type="circle"
+                    percent={parseFloat(String(data?.predictionAccuracy || 0))}
+                    format={v => `${v}%`}
+                    strokeColor={{
+                      '0%': '#108ee9',
+                      '100%': '#87d068',
+                    }}
+                  />
+                </div>
               </Space>
             </Card>
           </Col>
           <Col span={18}>
-            <Card bordered={false} style={{ borderRadius: 12 }} title="近7天出入库趋势">
-              <div ref={trendChartRef} style={{ height: 200 }} />
+            <Card bordered={false} className="rounded-xl" title="近7天出入库趋势">
+              <div ref={trendChartRef} className="h-[200px]" />
             </Card>
           </Col>
         </Row>
 
         <Row gutter={16}>
           <Col span={8}>
-            <Card bordered={false} style={{ borderRadius: 12 }} title="耗材分类分布">
-              <div ref={categoryChartRef} style={{ height: 260 }} />
+            <Card bordered={false} className="rounded-xl" title="耗材分类分布">
+              <div ref={categoryChartRef} className="h-[260px]" />
             </Card>
           </Col>
           <Col span={8}>
-            <Card bordered={false} style={{ borderRadius: 12 }} title="科室消耗排名（近30天）">
+            <Card bordered={false} className="rounded-xl" title="科室消耗排名（近30天）">
               <Table
                 rowKey={r => `${(r as any).deptId}`}
                 columns={deptColumns}
@@ -196,8 +197,8 @@ export default function BIScreenPage() {
             </Card>
           </Col>
           <Col span={8}>
-            <Card bordered={false} style={{ borderRadius: 12 }} title="近6月采购成本趋势">
-              <div ref={purchaseTrendRef} style={{ height: 260 }} />
+            <Card bordered={false} className="rounded-xl" title="近6月采购成本趋势">
+              <div ref={purchaseTrendRef} className="h-[260px]" />
             </Card>
           </Col>
         </Row>

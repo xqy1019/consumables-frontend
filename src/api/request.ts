@@ -6,12 +6,18 @@ const request = axios.create({
   timeout: 10000,
 })
 
-// 请求拦截器：添加 token
+// 请求拦截器：添加 token，过滤空字符串参数
 request.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
+    }
+    // 过滤掉值为空字符串的 query 参数，避免后端按空字符串精确匹配
+    if (config.params) {
+      config.params = Object.fromEntries(
+        Object.entries(config.params).filter(([, v]) => v !== '' && v !== null && v !== undefined)
+      )
     }
     return config
   },

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   Table, Button, Space, Modal, Form, Input, message, Card, Row, Col,
-  Typography, Tag, DatePicker, Select,
+  Tag, DatePicker, Select,
 } from 'antd'
 import { PlusOutlined, SearchOutlined, QrcodeOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -9,8 +9,6 @@ import { tracingApi } from '@/api/tracing'
 import { materialsApi } from '@/api/materials'
 import { suppliersApi } from '@/api/system'
 import type { UdiVO, Material, Supplier } from '@/types'
-
-const { Title } = Typography
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   IN_STOCK: { label: '在库', color: 'success' },
@@ -92,23 +90,22 @@ export default function UdiPage() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col><Title level={4} style={{ margin: 0 }}>UDI 管理（一物一码）</Title></Col>
-          <Col>
-            <Space>
-              <Button icon={<QrcodeOutlined />} onClick={() => { setScanResult(null); setScanCode(''); setScanOpen(true) }}>
-                扫码查询
-              </Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-                form.resetFields(); setCreateOpen(true)
-              }}>注册 UDI</Button>
-            </Space>
-          </Col>
-        </Row>
-      </Card>
-      <Card bordered={false} style={{ borderRadius: 12 }}>
-        <Row gutter={8} style={{ marginBottom: 16 }}>
+      <Card
+        bordered={false}
+        className="rounded-xl"
+        title="UDI 管理（一物一码）"
+        extra={
+          <Space>
+            <Button icon={<QrcodeOutlined />} onClick={() => { setScanResult(null); setScanCode(''); setScanOpen(true) }}>
+              扫码查询
+            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+              form.resetFields(); setCreateOpen(true)
+            }}>注册 UDI</Button>
+          </Space>
+        }
+      >
+        <Row gutter={8} className="mb-4">
           <Col flex="1">
             <Input placeholder="搜索 UDI 码或耗材名称" prefix={<SearchOutlined />}
               value={keyword} onChange={e => setKeyword(e.target.value)} allowClear
@@ -116,7 +113,7 @@ export default function UdiPage() {
           </Col>
           <Col>
             <Select placeholder="状态筛选" value={statusFilter} onChange={setStatusFilter}
-              allowClear style={{ width: 120 }}>
+              allowClear className="w-[120px]">
               {Object.entries(STATUS_MAP).map(([k, v]) => (
                 <Select.Option key={k} value={k}>{v.label}</Select.Option>
               ))}
@@ -140,7 +137,7 @@ export default function UdiPage() {
       <Modal title="注册 UDI" open={createOpen}
         onCancel={() => setCreateOpen(false)} onOk={() => form.submit()}
         width={600} destroyOnClose>
-        <Form form={form} onFinish={handleCreate} layout="vertical" style={{ paddingTop: 8 }}>
+        <Form form={form} onFinish={handleCreate} layout="vertical" className="pt-2">
           <Row gutter={16}>
             <Col span={24}>
               <Form.Item name="udiCode" label="UDI 码" rules={[{ required: true }]}>
@@ -168,12 +165,12 @@ export default function UdiPage() {
             </Col>
             <Col span={12}>
               <Form.Item name="manufactureDate" label="生产日期">
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker className="w-full" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="expiryDate" label="有效期">
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker className="w-full" />
               </Form.Item>
             </Col>
           </Row>
@@ -183,7 +180,7 @@ export default function UdiPage() {
       {/* 扫码查询弹窗 */}
       <Modal title="扫码查询" open={scanOpen}
         onCancel={() => setScanOpen(false)} footer={null} destroyOnClose>
-        <Row gutter={8} style={{ marginBottom: 16 }}>
+        <Row gutter={8} className="mb-4">
           <Col flex="1">
             <Input placeholder="输入或扫描 UDI 码" value={scanCode}
               onChange={e => setScanCode(e.target.value)}

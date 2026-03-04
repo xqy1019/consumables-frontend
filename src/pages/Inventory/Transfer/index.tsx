@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import {
-  Table, Button, Modal, Form, Input, message, Card, Row, Col,
-  Typography, Tag, InputNumber, Select,
+  Table, Button, Modal, Form, Input, message, Card,
+  Tag, InputNumber, Select, Row, Col,
 } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { inventoryExtApi } from '@/api/inventoryExt'
 import { inventoryApi } from '@/api/inventory'
 import type { TransferVO, Inventory } from '@/types'
-
-const { Title } = Typography
 
 export default function TransferPage() {
   const [data, setData] = useState<TransferVO[]>([])
@@ -72,17 +70,16 @@ export default function TransferPage() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col><Title level={4} style={{ margin: 0 }}>库存移库</Title></Col>
-          <Col>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-              form.resetFields(); setSelectedInv(null); setCreateOpen(true)
-            }}>新建移库</Button>
-          </Col>
-        </Row>
-      </Card>
-      <Card bordered={false} style={{ borderRadius: 12 }}>
+      <Card
+        bordered={false}
+        className="rounded-xl"
+        title="库存移库"
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+            form.resetFields(); setSelectedInv(null); setCreateOpen(true)
+          }}>新建移库</Button>
+        }
+      >
         <Table
           rowKey="id" columns={columns} dataSource={data} loading={loading} scroll={{ x: 1000 }}
           pagination={{
@@ -96,7 +93,7 @@ export default function TransferPage() {
       <Modal title="新建移库" open={createOpen}
         onCancel={() => { setCreateOpen(false); setSelectedInv(null) }} onOk={() => form.submit()}
         width={560} destroyOnClose>
-        <Form form={form} onFinish={handleCreate} layout="vertical" style={{ paddingTop: 8 }}>
+        <Form form={form} onFinish={handleCreate} layout="vertical" className="pt-2">
           <Form.Item name="inventoryId" label="选择库存记录" rules={[{ required: true }]}
             extra="请选择具体库存批次">
             <Select
@@ -117,7 +114,7 @@ export default function TransferPage() {
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="quantity" label={`数量（当前库存：${selectedInv.quantity}）`} rules={[{ required: true }]}>
-                  <InputNumber min={1} max={selectedInv.quantity} style={{ width: '100%' }} />
+                  <InputNumber min={1} max={selectedInv.quantity} className="w-full" />
                 </Form.Item>
               </Col>
               <Col span={12}>

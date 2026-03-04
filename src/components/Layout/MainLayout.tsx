@@ -14,8 +14,64 @@ import {
 import { useDispatch, useSelector } from 'react-redux'
 import { logout } from '@/store/slices/authSlice'
 import type { RootState } from '@/store'
+import styled from 'styled-components'
 
 const { Header, Sider, Content } = Layout
+
+// 内容区：纵向 flex 容器，随侧边栏宽度收缩/展开
+const StyledContentLayout = styled(Layout)<{ $collapsed: boolean }>`
+  margin-left: ${p => (p.$collapsed ? '80px' : '220px')};
+  transition: margin-left 0.2s;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+`
+
+// 顶部栏：固定高度，不参与滚动
+const StyledHeader = styled(Header)<{ $bg: string }>`
+  background: ${p => p.$bg};
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+  flex-shrink: 0;
+  padding: 0 24px;
+  height: 56px;
+  line-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`
+
+// Logo 区域
+const StyledLogo = styled.div<{ $collapsed: boolean }>`
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: ${p => (p.$collapsed ? '14px' : '15px')};
+  font-weight: 700;
+  color: #fff;
+  padding: 0 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  white-space: nowrap;
+  flex-shrink: 0;
+`
+
+// 面包屑：固定高度，不参与滚动
+const StyledBreadcrumbWrapper = styled.div<{ $bg: string; $borderColor: string }>`
+  background: ${p => p.$bg};
+  border-bottom: 1px solid ${p => p.$borderColor};
+  flex-shrink: 0;
+  padding: 10px 24px;
+`
+
+// 内容主体：占满剩余高度，独立滚动
+const StyledContent = styled(Content)`
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  min-height: 0;
+`
 
 const menuItems = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: '工作台' },
@@ -115,10 +171,8 @@ export default function MainLayout() {
     }
   }
 
-  // 计算当前路径
   const path = location.pathname
 
-  // 面包屑路由映射
   const breadcrumbMap: Record<string, { parent?: string; label: string }> = {
     '/dashboard': { label: '工作台' },
     '/materials': { parent: '基础数据', label: '耗材目录' },
@@ -155,12 +209,15 @@ export default function MainLayout() {
     return items
   }
 
-  // 计算当前选中的菜单项
-  const selectedKey = path
-
   const getOpenKeys = () => {
     if (path.startsWith('/inventory')) return ['/inv']
-    if (path.startsWith('/materials') || path.startsWith('/dict') || path.startsWith('/system/suppliers') || path.startsWith('/system/departments')) return ['/basic']
+    if (
+      path.startsWith('/materials') ||
+      path.startsWith('/dict') ||
+      path.startsWith('/system/suppliers') ||
+      path.startsWith('/system/departments')
+    )
+      return ['/basic']
     if (path.startsWith('/tracing')) return ['/tracing']
     if (path.startsWith('/ai')) return ['/ai']
     if (path.startsWith('/purchase')) return ['/purchase']
@@ -170,49 +227,51 @@ export default function MainLayout() {
   }
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ height: '100vh', overflow: 'hidden' }}>
+      {/* 侧边栏：固定定位，独立滚动 */}
       <Sider
-        collapsible
         collapsed={collapsed}
-        onCollapse={setCollapsed}
+        trigger={null}
         theme="dark"
         width={220}
-        style={{ position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: 100, overflowY: 'auto', overflowX: 'hidden' }}
+        style={{
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          zIndex: 100,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
       >
-        <div style={{
-          height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#fff', fontSize: collapsed ? 14 : 15, fontWeight: 'bold',
-          borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '0 12px',
-          overflow: 'hidden', whiteSpace: 'nowrap', flexShrink: 0,
-        }}>
+        <StyledLogo $collapsed={collapsed}>
           {collapsed ? '医耗' : '智能医疗耗材系统'}
-        </div>
+        </StyledLogo>
         <Menu
           theme="dark"
           mode="inline"
-          selectedKeys={[selectedKey]}
+          selectedKeys={[path]}
           defaultOpenKeys={getOpenKeys()}
           items={menuItems}
           onClick={handleMenuClick}
-          style={{ borderRight: 0 }}
+          style={{ borderRight: 0, flex: 1 }}
         />
       </Sider>
-      <Layout style={{ marginLeft: collapsed ? 80 : 220, transition: 'margin-left 0.2s' }}>
-        <Header style={{
-          position: 'sticky', top: 0, zIndex: 99,
-          background: token.colorBgContainer,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 24px', boxShadow: '0 1px 4px rgba(0,21,41,.08)',
-          height: 56,
-        }}>
+
+      {/* 内容区：随侧边栏宽度偏移，纵向 flex，内容独立滚动 */}
+      <StyledContentLayout $collapsed={collapsed}>
+        {/* 顶部导航栏 */}
+        <StyledHeader $bg={token.colorBgContainer}>
           <Space size={16}>
-            <div
+            <span
+              style={{ color: token.colorText, fontSize: 18, cursor: 'pointer', display: 'flex' }}
               onClick={() => setCollapsed(!collapsed)}
-              style={{ fontSize: 18, cursor: 'pointer', color: token.colorText, lineHeight: 1, display: 'flex' }}
             >
               {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            </div>
-            <span style={{ fontSize: 15, fontWeight: 600, color: token.colorText }}>
+            </span>
+            <span style={{ color: token.colorText, fontSize: 15, fontWeight: 600 }}>
               欢迎，{realName || '用户'}
             </span>
           </Space>
@@ -221,27 +280,36 @@ export default function MainLayout() {
               角色：<span style={{ color: token.colorPrimary }}>{roles?.[0] || 'USER'}</span>
             </span>
             <Badge count={3} size="small" offset={[2, 0]}>
-              <BellOutlined style={{ fontSize: 16, cursor: 'pointer', color: token.colorTextSecondary }} />
+              <BellOutlined
+                style={{ color: token.colorTextSecondary, fontSize: 16, cursor: 'pointer' }}
+              />
             </Badge>
             <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenu }}>
-              <Space style={{ cursor: 'pointer' }} size={6}>
-                <Avatar style={{ backgroundColor: token.colorPrimary }} icon={<UserOutlined />} size={28} />
-                <span style={{ fontSize: 13, color: token.colorText }}>{realName || '用户'}</span>
+              <Space size={6} style={{ cursor: 'pointer' }}>
+                <Avatar
+                  style={{ backgroundColor: token.colorPrimary }}
+                  icon={<UserOutlined />}
+                  size={28}
+                />
+                <span style={{ color: token.colorText, fontSize: 13 }}>{realName || '用户'}</span>
               </Space>
             </Dropdown>
           </Space>
-        </Header>
-        <div style={{
-          padding: '10px 24px',
-          background: token.colorBgLayout,
-          borderBottom: `1px solid ${token.colorBorderSecondary}`,
-        }}>
+        </StyledHeader>
+
+        {/* 面包屑 */}
+        <StyledBreadcrumbWrapper
+          $bg={token.colorBgLayout}
+          $borderColor={token.colorBorderSecondary}
+        >
           <Breadcrumb items={getBreadcrumbItems()} />
-        </div>
-        <Content style={{ margin: 24, minHeight: 'calc(100vh - 136px)' }}>
+        </StyledBreadcrumbWrapper>
+
+        {/* 主内容：flex: 1 占满剩余高度，overflow-y: auto 独立滚动 */}
+        <StyledContent>
           <Outlet />
-        </Content>
-      </Layout>
+        </StyledContent>
+      </StyledContentLayout>
     </Layout>
   )
 }

@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import {
   Table, Button, Space, Modal, Form, Input, message, Card, Row, Col,
-  Typography, Tag, Drawer, InputNumber, Descriptions,
+  Tag, Drawer, InputNumber, Descriptions,
 } from 'antd'
 import { PlusOutlined, EyeOutlined, CheckOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { inventoryExtApi } from '@/api/inventoryExt'
 import type { StocktakingVO } from '@/types'
-
-const { Title } = Typography
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   IN_PROGRESS: { label: '盘点中', color: 'processing' },
@@ -112,7 +110,7 @@ export default function StocktakingPage() {
       title: '实际数量', width: 120,
       render: (_: any, record: any) => currentRecord?.status !== 'COMPLETED' ? (
         <InputNumber
-          min={0} size="small" style={{ width: 80 }}
+          min={0} size="small" className="w-[80px]"
           value={localActual[record.id] ?? record.systemQuantity ?? 0}
           onChange={v => setLocalActual(prev => ({ ...prev, [record.id]: v ?? 0 }))}
         />
@@ -131,17 +129,16 @@ export default function StocktakingPage() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col><Title level={4} style={{ margin: 0 }}>库存盘点</Title></Col>
-          <Col>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-              form.resetFields(); setCreateOpen(true)
-            }}>新建盘点</Button>
-          </Col>
-        </Row>
-      </Card>
-      <Card bordered={false} style={{ borderRadius: 12 }}>
+      <Card
+        bordered={false}
+        className="rounded-xl"
+        title="库存盘点"
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+            form.resetFields(); setCreateOpen(true)
+          }}>新建盘点</Button>
+        }
+      >
         <Table
           rowKey="id" columns={columns} dataSource={data} loading={loading} scroll={{ x: 900 }}
           pagination={{
@@ -154,7 +151,7 @@ export default function StocktakingPage() {
 
       <Modal title="新建盘点单" open={createOpen}
         onCancel={() => setCreateOpen(false)} onOk={() => form.submit()} destroyOnClose>
-        <Form form={form} onFinish={handleCreate} layout="vertical" style={{ paddingTop: 8 }}>
+        <Form form={form} onFinish={handleCreate} layout="vertical" className="pt-2">
           <Form.Item name="location" label="盘点库位" extra="留空则盘点全部在库耗材">
             <Input placeholder="如：A区（留空=全库）" />
           </Form.Item>
@@ -182,7 +179,7 @@ export default function StocktakingPage() {
       >
         {currentRecord && (
           <>
-            <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
+            <Descriptions bordered size="small" column={2} className="mb-4">
               <Descriptions.Item label="盘点单号">{currentRecord.stocktakingNo}</Descriptions.Item>
               <Descriptions.Item label="库位">{currentRecord.location || '全库'}</Descriptions.Item>
               <Descriptions.Item label="状态">

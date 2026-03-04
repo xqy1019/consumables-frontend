@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react'
 import {
-  Table, Button, Card, Row, Col, Typography, Tag, Space, Statistic,
+  Table, Button, Card, Row, Col, Tag, Space, Statistic,
   Progress, message, Select,
 } from 'antd'
 import { RobotOutlined, ThunderboltOutlined, SafetyOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import styled from 'styled-components'
 import { aiApi } from '@/api/ai'
 import type { PredictionVO, SafetyStockVO } from '@/types'
 
-const { Title } = Typography
+const ColorValue = styled.span<{ color: string }>`
+  font-weight: 600;
+  color: ${p => p.color};
+`
 
 export default function PredictionPage() {
   const [predictions, setPredictions] = useState<PredictionVO[]>([])
@@ -52,7 +56,7 @@ export default function PredictionPage() {
     { title: '科室', dataIndex: 'deptName', width: 120 },
     { title: '预测月份', dataIndex: 'predictionMonth', width: 100 },
     { title: '预测用量', dataIndex: 'predictedQuantity', width: 100,
-      render: v => <span style={{ fontWeight: 600, color: '#1677ff' }}>{v}</span>,
+      render: v => <span className="font-semibold text-[#1677ff]">{v}</span>,
     },
     {
       title: '置信度', dataIndex: 'confidence', width: 120,
@@ -79,10 +83,10 @@ export default function PredictionPage() {
     { title: '最低库存', dataIndex: 'minStock', width: 100 },
     { title: '最高库存', dataIndex: 'maxStock', width: 100 },
     { title: '缺口数量', dataIndex: 'shortage', width: 100,
-      render: v => <span style={{ fontWeight: 600, color: v > 0 ? '#ff4d4f' : '#52c41a' }}>{v}</span>,
+      render: v => <ColorValue color={v > 0 ? '#ff4d4f' : '#52c41a'}>{v}</ColorValue>,
     },
     { title: '建议采购量', dataIndex: 'suggestedPurchase', width: 110,
-      render: v => v > 0 ? <span style={{ fontWeight: 600, color: '#1677ff' }}>{v}</span> : '-',
+      render: v => v > 0 ? <span className="font-semibold text-[#1677ff]">{v}</span> : '-',
     },
     {
       title: '状态', width: 100,
@@ -102,32 +106,18 @@ export default function PredictionPage() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col><Title level={4} style={{ margin: 0 }}>AI 智能预测</Title></Col>
-          <Col>
-            <Button
-              type="primary" icon={<ThunderboltOutlined />}
-              loading={triggering} onClick={handleTrigger}
-            >
-              触发 AI 预测
-            </Button>
-          </Col>
-        </Row>
-      </Card>
-
-      <Row gutter={16} style={{ marginBottom: 16 }}>
+      <Row gutter={16} className="mb-4">
         <Col span={8}>
-          <Card bordered={false} style={{ borderRadius: 12 }}>
+          <Card bordered={false} className="rounded-xl">
             <Statistic
               title="预测记录总数"
               value={total}
-              prefix={<RobotOutlined style={{ color: '#1677ff' }} />}
+              prefix={<RobotOutlined className="text-[#1677ff]" />}
             />
           </Card>
         </Col>
         <Col span={8}>
-          <Card bordered={false} style={{ borderRadius: 12 }}>
+          <Card bordered={false} className="rounded-xl">
             <Statistic
               title="安全库存预警数"
               value={safetyStock.filter(s => s.shortage > 0).length}
@@ -137,7 +127,7 @@ export default function PredictionPage() {
           </Card>
         </Col>
         <Col span={8}>
-          <Card bordered={false} style={{ borderRadius: 12 }}>
+          <Card bordered={false} className="rounded-xl">
             <Statistic
               title="平均预测置信度"
               value={predictions.length > 0
@@ -152,7 +142,13 @@ export default function PredictionPage() {
       </Row>
 
       <Card
-        bordered={false} style={{ borderRadius: 12 }}
+        bordered={false} className="rounded-xl"
+        title="AI 智能预测"
+        extra={
+          <Button type="primary" icon={<ThunderboltOutlined />} loading={triggering} onClick={handleTrigger}>
+            触发 AI 预测
+          </Button>
+        }
         tabList={[
           { key: 'prediction', tab: <Space><RobotOutlined />需求预测</Space> },
           { key: 'safety', tab: <Space><SafetyOutlined />安全库存分析</Space> },
@@ -162,9 +158,9 @@ export default function PredictionPage() {
       >
         {activeTab === 'prediction' && (
           <>
-            <Row gutter={8} style={{ marginBottom: 12 }}>
+            <Row gutter={8} className="mb-3">
               <Col>
-                <Select placeholder="选择月份" value={month} onChange={setMonth} allowClear style={{ width: 140 }}>
+                <Select placeholder="选择月份" value={month} onChange={setMonth} allowClear className="w-[140px]">
                   {months.map(m => <Select.Option key={m} value={m}>{m}</Select.Option>)}
                 </Select>
               </Col>

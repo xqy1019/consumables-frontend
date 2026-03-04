@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { Table, Button, Space, Modal, Form, Input, message, Popconfirm, Card, Row, Col, Typography, Tag } from 'antd'
+import { Table, Button, Space, Modal, Form, Input, message, Popconfirm, Card, Tag } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { rolesApi } from '@/api/system'
 import type { Role } from '@/types'
-
-const { Title } = Typography
 
 export default function RolesPage() {
   const [data, setData] = useState<Role[]>([])
@@ -62,24 +60,23 @@ export default function RolesPage() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col><Title level={4} style={{ margin: 0 }}>角色管理</Title></Col>
-          <Col>
-            <Button type="primary" icon={<PlusOutlined />}
-              onClick={() => { setEditRecord(null); form.resetFields(); setModalOpen(true) }}>
-              新增角色
-            </Button>
-          </Col>
-        </Row>
-      </Card>
-      <Card bordered={false} style={{ borderRadius: 12 }}>
+      <Card
+        bordered={false}
+        className="rounded-xl"
+        title="角色管理"
+        extra={
+          <Button type="primary" icon={<PlusOutlined />}
+            onClick={() => { setEditRecord(null); form.resetFields(); setModalOpen(true) }}>
+            新增角色
+          </Button>
+        }
+      >
         <Table rowKey="id" columns={columns} dataSource={data} loading={loading} pagination={false} />
       </Card>
       <Modal title={editRecord ? '编辑角色' : '新增角色'} open={modalOpen}
         onCancel={() => { setModalOpen(false); setEditRecord(null); form.resetFields() }}
         onOk={() => form.submit()} destroyOnClose>
-        <Form form={form} onFinish={handleSubmit} layout="vertical" style={{ paddingTop: 8 }}>
+        <Form form={form} onFinish={handleSubmit} layout="vertical" className="pt-2">
           <Form.Item name="roleName" label="角色名称" rules={[{ required: true }]}><Input /></Form.Item>
           {!editRecord && (
             <Form.Item name="roleCode" label="角色编码" rules={[{ required: true }]}>

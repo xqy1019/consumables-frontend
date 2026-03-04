@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import {
-  Table, Button, Modal, Form, Input, message, Card, Row, Col,
-  Typography, Tag, InputNumber, Select,
+  Table, Button, Modal, Form, Input, message, Card,
+  Tag, InputNumber, Select,
 } from 'antd'
 import { WarningOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { inventoryExtApi } from '@/api/inventoryExt'
 import { inventoryApi } from '@/api/inventory'
 import type { DamageVO, Inventory } from '@/types'
-
-const { Title } = Typography
 
 export default function DamagePage() {
   const [data, setData] = useState<DamageVO[]>([])
@@ -72,17 +70,16 @@ export default function DamagePage() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col><Title level={4} style={{ margin: 0 }}>库存报损</Title></Col>
-          <Col>
-            <Button type="primary" danger icon={<WarningOutlined />} onClick={() => {
-              form.resetFields(); setSelectedInv(null); setCreateOpen(true)
-            }}>申请报损</Button>
-          </Col>
-        </Row>
-      </Card>
-      <Card bordered={false} style={{ borderRadius: 12 }}>
+      <Card
+        bordered={false}
+        className="rounded-xl"
+        title="库存报损"
+        extra={
+          <Button type="primary" danger icon={<WarningOutlined />} onClick={() => {
+            form.resetFields(); setSelectedInv(null); setCreateOpen(true)
+          }}>申请报损</Button>
+        }
+      >
         <Table
           rowKey="id" columns={columns} dataSource={data} loading={loading} scroll={{ x: 1000 }}
           pagination={{
@@ -96,7 +93,7 @@ export default function DamagePage() {
       <Modal title="申请报损" open={createOpen}
         onCancel={() => { setCreateOpen(false); setSelectedInv(null) }} onOk={() => form.submit()}
         width={560} destroyOnClose>
-        <Form form={form} onFinish={handleCreate} layout="vertical" style={{ paddingTop: 8 }}>
+        <Form form={form} onFinish={handleCreate} layout="vertical" className="pt-2">
           <Form.Item name="inventoryId" label="选择库存记录" rules={[{ required: true }]}
             extra="请选择需要报损的具体批次">
             <Select
@@ -111,7 +108,7 @@ export default function DamagePage() {
           </Form.Item>
           {selectedInv && (
             <Form.Item name="quantity" label={`报损数量（当前库存：${selectedInv.quantity}）`} rules={[{ required: true }]}>
-              <InputNumber min={1} max={selectedInv.quantity} style={{ width: '100%' }} />
+              <InputNumber min={1} max={selectedInv.quantity} className="w-full" />
             </Form.Item>
           )}
           <Form.Item name="damageReason" label="报损原因" rules={[{ required: true }]}>

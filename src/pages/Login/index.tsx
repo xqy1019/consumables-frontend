@@ -28,15 +28,14 @@ export default function Login() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}>
-      <Card style={{ width: 420, borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-        <Space direction="vertical" align="center" style={{ width: '100%', marginBottom: 32 }}>
-          <MedicineBoxOutlined style={{ fontSize: 48, color: '#6366f1' }} />
-          <Title level={3} style={{ margin: 0 }}>智能医疗耗材管理系统</Title>
+    <div className="min-h-screen flex items-center justify-center bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)]">
+      <Card
+        className="w-[420px] rounded-xl"
+        style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}
+      >
+        <Space direction="vertical" align="center" className="w-full mb-8">
+          <MedicineBoxOutlined className="text-[48px] text-[#6366f1]" />
+          <Title level={3} className="!m-0">智能医疗耗材管理系统</Title>
           <Text type="secondary">请登录您的账户</Text>
         </Space>
         <Form onFinish={onFinish} size="large" initialValues={{ username: 'admin', password: 'Admin@123456' }}>
@@ -47,13 +46,12 @@ export default function Login() {
             <Input.Password prefix={<LockOutlined />} placeholder="密码" />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" block loading={loading}
-              style={{ background: '#6366f1', borderColor: '#6366f1', height: 44 }}>
+            <Button type="primary" htmlType="submit" block loading={loading} className="h-11">
               登 录
             </Button>
           </Form.Item>
         </Form>
-        <Text type="secondary" style={{ fontSize: 12 }}>
+        <Text type="secondary" className="text-xs">
           默认账户：admin / Admin@123456
         </Text>
       </Card>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   Table, Button, Space, Modal, Form, Input, message, Card, Row, Col,
-  Typography, Tag, Drawer, Descriptions, InputNumber, DatePicker, Select,
+  Tag, Drawer, Descriptions, InputNumber, DatePicker, Select,
 } from 'antd'
 import { PlusOutlined, EyeOutlined, CheckOutlined, CloseOutlined, SendOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -9,8 +9,6 @@ import { purchaseApi } from '@/api/purchase'
 import { materialsApi } from '@/api/materials'
 import { departmentsApi } from '@/api/system'
 import type { RequisitionVO, PurchaseRequisitionItemVO, Material, Department } from '@/types'
-
-const { Title } = Typography
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   DRAFT: { label: '草稿', color: 'default' },
@@ -138,18 +136,17 @@ export default function PurchaseRequisitionPage() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col><Title level={4} style={{ margin: 0 }}>请购单管理</Title></Col>
-          <Col>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-              form.resetFields(); setCreateOpen(true)
-            }}>新建请购单</Button>
-          </Col>
-        </Row>
-      </Card>
-      <Card bordered={false} style={{ borderRadius: 12 }}>
-        <Row gutter={8} style={{ marginBottom: 16 }}>
+      <Card
+        bordered={false}
+        className="rounded-xl"
+        title="请购单管理"
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+            form.resetFields(); setCreateOpen(true)
+          }}>新建请购单</Button>
+        }
+      >
+        <Row gutter={8} className="mb-4">
           <Col flex="1">
             <Input placeholder="搜索请购单号" value={keyword}
               onChange={e => setKeyword(e.target.value)} allowClear
@@ -157,7 +154,7 @@ export default function PurchaseRequisitionPage() {
           </Col>
           <Col>
             <Select placeholder="状态筛选" value={statusFilter} onChange={setStatusFilter}
-              allowClear style={{ width: 120 }}>
+              allowClear className="w-[120px]">
               {Object.entries(STATUS_MAP).map(([k, v]) => (
                 <Select.Option key={k} value={k}>{v.label}</Select.Option>
               ))}
@@ -181,7 +178,7 @@ export default function PurchaseRequisitionPage() {
       <Modal title="新建请购单" open={createOpen}
         onCancel={() => setCreateOpen(false)} onOk={() => form.submit()}
         width={800} destroyOnClose>
-        <Form form={form} onFinish={handleCreate} layout="vertical" style={{ paddingTop: 8 }}>
+        <Form form={form} onFinish={handleCreate} layout="vertical" className="pt-2">
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="deptId" label="申购科室">
@@ -192,7 +189,7 @@ export default function PurchaseRequisitionPage() {
             </Col>
             <Col span={12}>
               <Form.Item name="requiredDate" label="需求日期">
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker className="w-full" />
               </Form.Item>
             </Col>
             <Col span={24}>
@@ -204,8 +201,8 @@ export default function PurchaseRequisitionPage() {
           <Form.List name="items">
             {(fields, { add, remove }) => (
               <>
-                <Row justify="space-between" align="middle" style={{ marginBottom: 8 }}>
-                  <Col><span style={{ fontWeight: 600 }}>申购明细</span></Col>
+                <Row justify="space-between" align="middle" className="mb-2">
+                  <Col><span className="font-semibold">申购明细</span></Col>
                   <Col><Button size="small" type="dashed" onClick={() => add()}>添加耗材</Button></Col>
                 </Row>
                 {fields.map(field => (
@@ -219,16 +216,16 @@ export default function PurchaseRequisitionPage() {
                     </Col>
                     <Col flex="1">
                       <Form.Item name={[field.name, 'quantity']} rules={[{ required: true }]}>
-                        <InputNumber min={1} placeholder="数量" style={{ width: '100%' }} />
+                        <InputNumber min={1} placeholder="数量" className="w-full" />
                       </Form.Item>
                     </Col>
                     <Col flex="1">
                       <Form.Item name={[field.name, 'estimatedPrice']}>
-                        <InputNumber min={0} placeholder="预估单价" style={{ width: '100%' }} />
+                        <InputNumber min={0} placeholder="预估单价" className="w-full" />
                       </Form.Item>
                     </Col>
                     <Col>
-                      <Button danger size="small" onClick={() => remove(field.name)} style={{ marginTop: 4 }}>删除</Button>
+                      <Button danger size="small" onClick={() => remove(field.name)} className="mt-1">删除</Button>
                     </Col>
                   </Row>
                 ))}
@@ -245,7 +242,7 @@ export default function PurchaseRequisitionPage() {
       >
         {currentRecord && (
           <>
-            <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
+            <Descriptions bordered size="small" column={2} className="mb-4">
               <Descriptions.Item label="请购单号">{currentRecord.reqNo}</Descriptions.Item>
               <Descriptions.Item label="科室">{currentRecord.deptName}</Descriptions.Item>
               <Descriptions.Item label="需求日期">{currentRecord.requiredDate}</Descriptions.Item>

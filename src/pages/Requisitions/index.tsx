@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { Table, Button, Space, Select, Tag, Card, Row, Col, Typography, Popconfirm, message } from 'antd'
+import { Table, Button, Space, Select, Tag, Card, Popconfirm, message } from 'antd'
 import { PlusOutlined, EyeOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useNavigate } from 'react-router-dom'
 import { requisitionsApi } from '@/api/requisitions'
 import type { Requisition } from '@/types'
 import { REQUISITION_STATUS } from '@/types'
-
-const { Title } = Typography
 
 export default function RequisitionsPage() {
   const [data, setData] = useState<Requisition[]>([])
@@ -70,27 +68,26 @@ export default function RequisitionsPage() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col><Title level={4} style={{ margin: 0 }}>申领管理</Title></Col>
-          <Col>
-            <Space>
-              <Select placeholder="按状态筛选" value={params.status || undefined}
-                onChange={(v) => setParams({ ...params, status: v || '', page: 1 })}
-                allowClear style={{ width: 140 }}>
-                {Object.entries(REQUISITION_STATUS).map(([k, v]) => (
-                  <Select.Option key={k} value={k}>{v.label}</Select.Option>
-                ))}
-              </Select>
-              <Button type="primary" icon={<PlusOutlined />}
-                onClick={() => navigate('/requisitions/create')}>
-                发起申领
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-      </Card>
-      <Card bordered={false} style={{ borderRadius: 12 }}>
+      <Card
+        bordered={false}
+        className="rounded-xl"
+        title="申领管理"
+        extra={
+          <Space>
+            <Select placeholder="按状态筛选" value={params.status || undefined}
+              onChange={(v) => setParams({ ...params, status: v || '', page: 1 })}
+              allowClear className="w-[140px]">
+              {Object.entries(REQUISITION_STATUS).map(([k, v]) => (
+                <Select.Option key={k} value={k}>{v.label}</Select.Option>
+              ))}
+            </Select>
+            <Button type="primary" icon={<PlusOutlined />}
+              onClick={() => navigate('/requisitions/create')}>
+              发起申领
+            </Button>
+          </Space>
+        }
+      >
         <Table rowKey="id" columns={columns} dataSource={data} loading={loading}
           scroll={{ x: 1000 }}
           pagination={{

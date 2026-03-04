@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import {
   Table, Button, Space, Modal, Form, Input, message, Card, Row, Col,
-  Typography, Tag, Drawer, InputNumber,
+  Tag, Drawer, InputNumber,
 } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, UnorderedListOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { dictApi } from '@/api/dict'
 import type { DictType, DictItem } from '@/types'
-
-const { Title } = Typography
 
 export default function DictPage() {
   const [types, setTypes] = useState<DictType[]>([])
@@ -169,25 +167,24 @@ export default function DictPage() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col><Title level={4} style={{ margin: 0 }}>字典管理</Title></Col>
-          <Col>
-            <Space>
-              <Input.Search
-                placeholder="搜索字典名称/编码"
-                allowClear
-                onSearch={v => { setKeyword(v); setTypePage({ page: 1, size: 10 }) }}
-                style={{ width: 220 }}
-              />
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-                setEditType(null); typeForm.resetFields(); setTypeModalOpen(true)
-              }}>新建字典</Button>
-            </Space>
-          </Col>
-        </Row>
-      </Card>
-      <Card bordered={false} style={{ borderRadius: 12 }}>
+      <Card
+        bordered={false}
+        className="rounded-xl"
+        title="字典管理"
+        extra={
+          <Space>
+            <Input.Search
+              placeholder="搜索字典名称/编码"
+              allowClear
+              onSearch={v => { setKeyword(v); setTypePage({ page: 1, size: 10 }) }}
+              className="w-[220px]"
+            />
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+              setEditType(null); typeForm.resetFields(); setTypeModalOpen(true)
+            }}>新建字典</Button>
+          </Space>
+        }
+      >
         <Table
           rowKey="id" columns={typeColumns} dataSource={types}
           loading={typeLoading} scroll={{ x: 800 }}
@@ -205,7 +202,7 @@ export default function DictPage() {
         onCancel={() => { setTypeModalOpen(false); setEditType(null) }}
         onOk={() => typeForm.submit()} destroyOnClose
       >
-        <Form form={typeForm} onFinish={handleTypeSubmit} layout="vertical" style={{ paddingTop: 8 }}>
+        <Form form={typeForm} onFinish={handleTypeSubmit} layout="vertical" className="pt-2">
           {!editType && (
             <Form.Item name="dictCode" label="字典编码" rules={[{ required: true, message: '请输入字典编码' }]}
               extra="建议小写英文+下划线，如 material_type">
@@ -244,7 +241,7 @@ export default function DictPage() {
         onCancel={() => { setItemModalOpen(false); setEditItem(null) }}
         onOk={() => itemForm.submit()} destroyOnClose
       >
-        <Form form={itemForm} onFinish={handleItemSubmit} layout="vertical" style={{ paddingTop: 8 }}>
+        <Form form={itemForm} onFinish={handleItemSubmit} layout="vertical" className="pt-2">
           <Form.Item name="itemLabel" label="标签（显示名）" rules={[{ required: true }]}>
             <Input placeholder="如：注射类" />
           </Form.Item>
@@ -252,7 +249,7 @@ export default function DictPage() {
             <Input placeholder="如：injection（建议与标签一致或用英文）" />
           </Form.Item>
           <Form.Item name="sortOrder" label="排序" initialValue={0}>
-            <InputNumber min={0} style={{ width: '100%' }} />
+            <InputNumber min={0} className="w-full" />
           </Form.Item>
           <Form.Item name="remark" label="备注">
             <Input.TextArea rows={2} />

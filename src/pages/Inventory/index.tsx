@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   Table, Button, Space, Modal, Form, InputNumber, Select,
-  DatePicker, message, Card, Row, Col, Typography, Tag, Tabs, Badge, Input,
+  DatePicker, message, Card, Row, Col, Tag, Tabs, Badge, Input,
 } from 'antd'
 import { PlusOutlined, DownloadOutlined, SearchOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -10,8 +10,6 @@ import { inventoryApi } from '@/api/inventory'
 import { materialsApi } from '@/api/materials'
 import { suppliersApi, departmentsApi } from '@/api/system'
 import type { Inventory, Material, Supplier, Department } from '@/types'
-
-const { Title } = Typography
 
 export default function InventoryPage() {
   const [data, setData] = useState<Inventory[]>([])
@@ -139,7 +137,7 @@ export default function InventoryPage() {
       label: '库存列表',
       children: (
         <>
-          <Row gutter={8} style={{ marginBottom: 16 }}>
+          <Row gutter={8} className="mb-4">
             <Col flex="1">
               <Input
                 placeholder="搜索耗材名称或编码"
@@ -156,7 +154,7 @@ export default function InventoryPage() {
                 placeholder="状态筛选"
                 value={params.status}
                 onChange={v => setParams({ ...params, status: v, page: 1 })}
-                style={{ width: 120 }}
+                className="w-[120px]"
               >
                 <Select.Option value={1}>在库</Select.Option>
                 <Select.Option value={0}>已出库</Select.Option>
@@ -187,19 +185,17 @@ export default function InventoryPage() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col><Title level={4} style={{ margin: 0 }}>库存管理</Title></Col>
-          <Col>
-            <Button type="primary" icon={<PlusOutlined />}
-              onClick={() => { inboundForm.resetFields(); setInboundOpen(true) }}>
-              耗材入库
-            </Button>
-          </Col>
-        </Row>
-      </Card>
-
-      <Card bordered={false} style={{ borderRadius: 12 }}>
+      <Card
+        bordered={false}
+        className="rounded-xl"
+        title="库存管理"
+        extra={
+          <Button type="primary" icon={<PlusOutlined />}
+            onClick={() => { inboundForm.resetFields(); setInboundOpen(true) }}>
+            耗材入库
+          </Button>
+        }
+      >
         <Tabs items={tabItems} />
       </Card>
 
@@ -207,7 +203,7 @@ export default function InventoryPage() {
       <Modal title="耗材入库" open={inboundOpen}
         onCancel={() => setInboundOpen(false)} onOk={() => inboundForm.submit()}
         width={600} destroyOnClose>
-        <Form form={inboundForm} onFinish={handleInbound} layout="vertical" style={{ paddingTop: 8 }}>
+        <Form form={inboundForm} onFinish={handleInbound} layout="vertical" className="pt-2">
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="materialId" label="耗材" rules={[{ required: true }]}>
@@ -218,7 +214,7 @@ export default function InventoryPage() {
             </Col>
             <Col span={12}>
               <Form.Item name="quantity" label="入库数量" rules={[{ required: true }]}>
-                <InputNumber min={1} style={{ width: '100%' }} />
+                <InputNumber min={1} className="w-full" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -240,17 +236,17 @@ export default function InventoryPage() {
             </Col>
             <Col span={12}>
               <Form.Item name="receiveDate" label="入库日期">
-                <DatePicker style={{ width: '100%' }} defaultValue={dayjs()} />
+                <DatePicker className="w-full" defaultValue={dayjs()} />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="manufactureDate" label="生产日期">
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker className="w-full" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="expiryDate" label="有效期">
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker className="w-full" />
               </Form.Item>
             </Col>
           </Row>
@@ -261,10 +257,10 @@ export default function InventoryPage() {
       <Modal title={`出库 - ${outboundRecord?.materialName}`} open={outboundOpen}
         onCancel={() => setOutboundOpen(false)} onOk={() => outboundForm.submit()}
         destroyOnClose>
-        <Form form={outboundForm} onFinish={handleOutbound} layout="vertical" style={{ paddingTop: 8 }}>
+        <Form form={outboundForm} onFinish={handleOutbound} layout="vertical" className="pt-2">
           <Form.Item name="quantity" label={`出库数量（当前库存：${outboundRecord?.quantity}）`}
             rules={[{ required: true }, { type: 'number', max: outboundRecord?.quantity, message: '超出库存' }]}>
-            <InputNumber min={1} max={outboundRecord?.quantity} style={{ width: '100%' }} />
+            <InputNumber min={1} max={outboundRecord?.quantity} className="w-full" />
           </Form.Item>
           <Form.Item name="deptId" label="领用科室">
             <Select allowClear>

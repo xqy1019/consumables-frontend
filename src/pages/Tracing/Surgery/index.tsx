@@ -10,7 +10,6 @@ import { departmentsApi } from '@/api/system'
 import type { SurgeryVO, BindingVO, Department } from '@/types'
 import { Select } from 'antd'
 
-const { Title } = Typography
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   SCHEDULED: { label: '待手术', color: 'default' },
@@ -115,18 +114,17 @@ export default function SurgeryPage() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col><Title level={4} style={{ margin: 0 }}>手术记录管理</Title></Col>
-          <Col>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-              createForm.resetFields(); setCreateOpen(true)
-            }}>新建手术记录</Button>
-          </Col>
-        </Row>
-      </Card>
-      <Card bordered={false} style={{ borderRadius: 12 }}>
-        <Row gutter={8} style={{ marginBottom: 16 }}>
+      <Card
+        bordered={false}
+        className="rounded-xl"
+        title="手术记录管理"
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+            createForm.resetFields(); setCreateOpen(true)
+          }}>新建手术记录</Button>
+        }
+      >
+        <Row gutter={8} className="mb-4">
           <Col flex="1">
             <Input placeholder="搜索患者姓名/ID 或手术单号" prefix={<SearchOutlined />}
               value={keyword} onChange={e => setKeyword(e.target.value)} allowClear
@@ -150,7 +148,7 @@ export default function SurgeryPage() {
       <Modal title="新建手术记录" open={createOpen}
         onCancel={() => setCreateOpen(false)} onOk={() => createForm.submit()}
         width={600} destroyOnClose>
-        <Form form={createForm} onFinish={handleCreate} layout="vertical" style={{ paddingTop: 8 }}>
+        <Form form={createForm} onFinish={handleCreate} layout="vertical" className="pt-2">
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="patientId" label="患者ID" rules={[{ required: true }]}>
@@ -169,7 +167,7 @@ export default function SurgeryPage() {
             </Col>
             <Col span={12}>
               <Form.Item name="surgeryDate" label="手术日期" rules={[{ required: true }]}>
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker className="w-full" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -200,7 +198,7 @@ export default function SurgeryPage() {
       >
         {currentSurgery && (
           <>
-            <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
+            <Descriptions bordered size="small" column={2} className="mb-4">
               <Descriptions.Item label="手术单号">{currentSurgery.surgeryNo}</Descriptions.Item>
               <Descriptions.Item label="患者">{currentSurgery.patientName}（{currentSurgery.patientId}）</Descriptions.Item>
               <Descriptions.Item label="手术类型">{currentSurgery.surgeryType}</Descriptions.Item>
@@ -220,13 +218,13 @@ export default function SurgeryPage() {
       {/* 绑定耗材弹窗 */}
       <Modal title="绑定手术耗材" open={bindOpen}
         onCancel={() => setBindOpen(false)} onOk={() => bindForm.submit()} destroyOnClose>
-        <Form form={bindForm} onFinish={handleBind} layout="vertical" style={{ paddingTop: 8 }}>
+        <Form form={bindForm} onFinish={handleBind} layout="vertical" className="pt-2">
           <Form.Item name="udiId" label="UDI ID" rules={[{ required: true }]}
             extra="请输入已注册的 UDI 记录 ID">
-            <InputNumber style={{ width: '100%' }} />
+            <InputNumber className="w-full" />
           </Form.Item>
           <Form.Item name="quantity" label="数量" initialValue={1}>
-            <InputNumber min={1} style={{ width: '100%' }} />
+            <InputNumber min={1} className="w-full" />
           </Form.Item>
           <Form.Item name="remark" label="备注">
             <Input.TextArea rows={2} />

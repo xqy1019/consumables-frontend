@@ -4,7 +4,6 @@ import * as echarts from 'echarts'
 import { reportsApi } from '@/api/reports'
 import type { CostAnalysis } from '@/types'
 
-const { Title } = Typography
 
 export default function CostAnalysisPage() {
   const chartRef = useRef<HTMLDivElement>(null)
@@ -67,21 +66,21 @@ export default function CostAnalysisPage() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col><Title level={4} style={{ margin: 0 }}>成本分析</Title></Col>
-          <Col>
-            <Radio.Group value={months} onChange={e => setMonths(e.target.value)}>
-              <Radio.Button value={3}>近3月</Radio.Button>
-              <Radio.Button value={6}>近6月</Radio.Button>
-              <Radio.Button value={12}>近12月</Radio.Button>
-            </Radio.Group>
-          </Col>
-        </Row>
-      </Card>
-      <Row gutter={16} style={{ marginBottom: 16 }}>
+      <Card
+        bordered={false}
+        className="rounded-xl mb-4"
+        title="成本分析"
+        extra={
+          <Radio.Group value={months} onChange={e => setMonths(e.target.value)}>
+            <Radio.Button value={3}>近3月</Radio.Button>
+            <Radio.Button value={6}>近6月</Radio.Button>
+            <Radio.Button value={12}>近12月</Radio.Button>
+          </Radio.Group>
+        }
+      />
+      <Row gutter={16} className="mb-4">
         <Col span={12}>
-          <Card bordered={false} style={{ borderRadius: 12 }}>
+          <Card bordered={false} className="rounded-xl">
             <Statistic
               title={`近${months}月消耗总成本`}
               value={totalConsumption}
@@ -92,7 +91,7 @@ export default function CostAnalysisPage() {
           </Card>
         </Col>
         <Col span={12}>
-          <Card bordered={false} style={{ borderRadius: 12 }}>
+          <Card bordered={false} className="rounded-xl">
             <Statistic
               title={`近${months}月采购总成本`}
               value={totalPurchase}
@@ -103,9 +102,9 @@ export default function CostAnalysisPage() {
           </Card>
         </Col>
       </Row>
-      <Card bordered={false} style={{ borderRadius: 12 }}>
+      <Card bordered={false} className="rounded-xl">
         <Spin spinning={loading}>
-          <div ref={chartRef} style={{ height: 400 }} />
+          <div ref={chartRef} className="h-[400px]" />
         </Spin>
       </Card>
     </div>

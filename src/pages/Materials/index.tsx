@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   Table, Button, Space, Input, Select, Tag, Modal, Form,
-  InputNumber, message, Popconfirm, Card, Row, Col, Typography,
+  InputNumber, message, Popconfirm, Card, Row, Col,
 } from 'antd'
 import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -9,8 +9,6 @@ import { materialsApi } from '@/api/materials'
 import { suppliersApi } from '@/api/system'
 import type { Material, Supplier } from '@/types'
 import { MATERIAL_CATEGORIES } from '@/types'
-
-const { Title } = Typography
 
 export default function MaterialsPage() {
   const [data, setData] = useState<Material[]>([])
@@ -96,32 +94,28 @@ export default function MaterialsPage() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Row gutter={16} align="middle" justify="space-between">
-          <Col>
-            <Title level={4} style={{ margin: 0 }}>耗材字典</Title>
-          </Col>
-          <Col>
-            <Space>
-              <Input placeholder="搜索耗材名称/编码" prefix={<SearchOutlined />}
-                value={params.keyword}
-                onChange={(e) => setParams({ ...params, keyword: e.target.value, page: 1 })}
-                style={{ width: 220 }} allowClear />
-              <Select placeholder="耗材分类" value={params.category || undefined}
-                onChange={(v) => setParams({ ...params, category: v || '', page: 1 })}
-                allowClear style={{ width: 140 }}>
-                {MATERIAL_CATEGORIES.map(c => <Select.Option key={c} value={c}>{c}</Select.Option>)}
-              </Select>
-              <Button type="primary" icon={<PlusOutlined />}
-                onClick={() => { setEditRecord(null); form.resetFields(); setModalOpen(true) }}>
-                新增耗材
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-      </Card>
-
-      <Card bordered={false} style={{ borderRadius: 12 }}>
+      <Card
+        bordered={false}
+        className="rounded-xl"
+        title="耗材字典"
+        extra={
+          <Space>
+            <Input placeholder="搜索耗材名称/编码" prefix={<SearchOutlined />}
+              value={params.keyword}
+              onChange={(e) => setParams({ ...params, keyword: e.target.value, page: 1 })}
+              className="w-[220px]" allowClear />
+            <Select placeholder="耗材分类" value={params.category || undefined}
+              onChange={(v) => setParams({ ...params, category: v || '', page: 1 })}
+              allowClear className="w-[140px]">
+              {MATERIAL_CATEGORIES.map(c => <Select.Option key={c} value={c}>{c}</Select.Option>)}
+            </Select>
+            <Button type="primary" icon={<PlusOutlined />}
+              onClick={() => { setEditRecord(null); form.resetFields(); setModalOpen(true) }}>
+              新增耗材
+            </Button>
+          </Space>
+        }
+      >
         <Table
           rowKey="id"
           columns={columns}
@@ -141,7 +135,7 @@ export default function MaterialsPage() {
         open={modalOpen} onCancel={() => { setModalOpen(false); setEditRecord(null); form.resetFields() }}
         onOk={() => form.submit()} width={640} destroyOnClose
       >
-        <Form form={form} onFinish={handleSubmit} layout="vertical" style={{ paddingTop: 8 }}>
+        <Form form={form} onFinish={handleSubmit} layout="vertical" className="pt-2">
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="materialCode" label="耗材编码" rules={[{ required: true }]}>
@@ -172,7 +166,7 @@ export default function MaterialsPage() {
             </Col>
             <Col span={8}>
               <Form.Item name="standardPrice" label="标准价格(元)">
-                <InputNumber min={0} precision={2} style={{ width: '100%' }} />
+                <InputNumber min={0} precision={2} className="w-full" />
               </Form.Item>
             </Col>
             <Col span={8}>
@@ -184,17 +178,17 @@ export default function MaterialsPage() {
             </Col>
             <Col span={8}>
               <Form.Item name="minStock" label="最低库存" initialValue={0}>
-                <InputNumber min={0} style={{ width: '100%' }} />
+                <InputNumber min={0} className="w-full" />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="maxStock" label="最高库存" initialValue={1000}>
-                <InputNumber min={0} style={{ width: '100%' }} />
+                <InputNumber min={0} className="w-full" />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="leadTime" label="采购周期(天)" initialValue={7}>
-                <InputNumber min={1} style={{ width: '100%' }} />
+                <InputNumber min={1} className="w-full" />
               </Form.Item>
             </Col>
             <Col span={24}>

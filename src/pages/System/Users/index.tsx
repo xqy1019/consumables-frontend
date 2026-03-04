@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import {
   Table, Button, Space, Input, Tag, Modal, Form, Select,
-  message, Popconfirm, Card, Row, Col, Typography, Switch,
+  message, Popconfirm, Card, Switch,
 } from 'antd'
 import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { usersApi, rolesApi, departmentsApi } from '@/api/system'
 import type { User, Role, Department } from '@/types'
-
-const { Title } = Typography
 
 export default function UsersPage() {
   const [data, setData] = useState<User[]>([])
@@ -94,24 +92,23 @@ export default function UsersPage() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col><Title level={4} style={{ margin: 0 }}>用户管理</Title></Col>
-          <Col>
-            <Space>
-              <Input placeholder="搜索用户名/姓名" prefix={<SearchOutlined />}
-                value={params.keyword}
-                onChange={(e) => setParams({ ...params, keyword: e.target.value, page: 1 })}
-                allowClear style={{ width: 200 }} />
-              <Button type="primary" icon={<PlusOutlined />}
-                onClick={() => { setEditRecord(null); form.resetFields(); setModalOpen(true) }}>
-                新增用户
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-      </Card>
-      <Card bordered={false} style={{ borderRadius: 12 }}>
+      <Card
+        bordered={false}
+        className="rounded-xl"
+        title="用户管理"
+        extra={
+          <Space>
+            <Input placeholder="搜索用户名/姓名" prefix={<SearchOutlined />}
+              value={params.keyword}
+              onChange={(e) => setParams({ ...params, keyword: e.target.value, page: 1 })}
+              allowClear className="w-[200px]" />
+            <Button type="primary" icon={<PlusOutlined />}
+              onClick={() => { setEditRecord(null); form.resetFields(); setModalOpen(true) }}>
+              新增用户
+            </Button>
+          </Space>
+        }
+      >
         <Table rowKey="id" columns={columns} dataSource={data} loading={loading}
           scroll={{ x: 1100 }}
           pagination={{
@@ -124,7 +121,7 @@ export default function UsersPage() {
       <Modal title={editRecord ? '编辑用户' : '新增用户'} open={modalOpen}
         onCancel={() => { setModalOpen(false); setEditRecord(null); form.resetFields() }}
         onOk={() => form.submit()} destroyOnClose>
-        <Form form={form} onFinish={handleSubmit} layout="vertical" style={{ paddingTop: 8 }}>
+        <Form form={form} onFinish={handleSubmit} layout="vertical" className="pt-2">
           {!editRecord && (
             <>
               <Form.Item name="username" label="用户名" rules={[{ required: true }]}>

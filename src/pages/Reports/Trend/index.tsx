@@ -4,7 +4,6 @@ import * as echarts from 'echarts'
 import { reportsApi } from '@/api/reports'
 import type { ConsumptionTrend } from '@/types'
 
-const { Title } = Typography
 
 export default function TrendPage() {
   const chartRef = useRef<HTMLDivElement>(null)
@@ -55,21 +54,20 @@ export default function TrendPage() {
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col><Title level={4} style={{ margin: 0 }}>消耗趋势分析</Title></Col>
-          <Col>
-            <Radio.Group value={months} onChange={e => setMonths(e.target.value)}>
-              <Radio.Button value={3}>近3月</Radio.Button>
-              <Radio.Button value={6}>近6月</Radio.Button>
-              <Radio.Button value={12}>近12月</Radio.Button>
-            </Radio.Group>
-          </Col>
-        </Row>
-      </Card>
-      <Card bordered={false} style={{ borderRadius: 12 }}>
+      <Card
+        bordered={false}
+        className="rounded-xl"
+        title="消耗趋势分析"
+        extra={
+          <Radio.Group value={months} onChange={e => setMonths(e.target.value)}>
+            <Radio.Button value={3}>近3月</Radio.Button>
+            <Radio.Button value={6}>近6月</Radio.Button>
+            <Radio.Button value={12}>近12月</Radio.Button>
+          </Radio.Group>
+        }
+      >
         <Spin spinning={loading}>
-          <div ref={chartRef} style={{ height: 400 }} />
+          <div ref={chartRef} className="h-[400px]" />
         </Spin>
       </Card>
     </div>

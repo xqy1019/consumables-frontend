@@ -1,14 +1,43 @@
 import React, { useState } from 'react'
 import {
-  Button, Input, Card, Row, Col, Typography, Tag, Tabs, Table,
-  Empty, Spin, Descriptions, Alert,
+  Button, Input, Card, Row, Col, Tag, Table,
+  Empty, Spin, Descriptions, Alert, Typography,
 } from 'antd'
-import { SearchOutlined, UserOutlined, MedicineBoxOutlined, QrcodeOutlined } from '@ant-design/icons'
+import { SearchOutlined, UserOutlined, MedicineBoxOutlined, QrcodeOutlined, CheckCircleFilled } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { tracingApi } from '@/api/tracing'
 import type { TraceResult, SurgeryVO, BindingVO } from '@/types'
 
-const { Title } = Typography
+
+const TRACE_OPTIONS = [
+  {
+    key: 'patient',
+    icon: <UserOutlined style={{ fontSize: 22, color: '#fff' }} />,
+    label: '患者追溯',
+    placeholder: '输入患者ID',
+    description: '查询患者使用的所有耗材',
+    color: '#1677ff',
+    bg: '#e6f4ff',
+  },
+  {
+    key: 'material',
+    icon: <MedicineBoxOutlined style={{ fontSize: 22, color: '#fff' }} />,
+    label: '耗材追溯',
+    placeholder: '输入耗材ID',
+    description: '查询耗材的全部使用记录',
+    color: '#52c41a',
+    bg: '#f6ffed',
+  },
+  {
+    key: 'udi',
+    icon: <QrcodeOutlined style={{ fontSize: 22, color: '#fff' }} />,
+    label: 'UDI 追溯',
+    placeholder: '输入 UDI 码',
+    description: '追溯单件耗材完整链条',
+    color: '#fa8c16',
+    bg: '#fff7e6',
+  },
+]
 
 export default function PatientTracePage() {
   const [traceType, setTraceType] = useState<'patient' | 'material' | 'udi'>('patient')
@@ -56,73 +85,144 @@ export default function PatientTracePage() {
     { title: '绑定时间', dataIndex: 'bindTime', width: 160 },
   ]
 
-  const traceOptions = [
-    { key: 'patient', icon: <UserOutlined />, label: '患者追溯', placeholder: '输入患者ID', description: '查询患者使用的所有耗材' },
-    { key: 'material', icon: <MedicineBoxOutlined />, label: '耗材追溯', placeholder: '输入耗材ID', description: '查询耗材的全部使用记录' },
-    { key: 'udi', icon: <QrcodeOutlined />, label: 'UDI 追溯', placeholder: '输入 UDI 码', description: '追溯单件耗材完整链条' },
-  ]
-
-  const currentOption = traceOptions.find(o => o.key === traceType)!
+  const currentOption = TRACE_OPTIONS.find(o => o.key === traceType)!
 
   return (
     <div>
-      <Card bordered={false} style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0, marginBottom: 16 }}>高值耗材追溯</Title>
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          {traceOptions.map(opt => (
-            <Col span={8} key={opt.key}>
-              <Card
-                size="small" hoverable
-                style={{ cursor: 'pointer', borderColor: traceType === opt.key ? '#1677ff' : undefined, background: traceType === opt.key ? '#f0f5ff' : undefined }}
-                onClick={() => { setTraceType(opt.key as any); setResult(null); setSearchValue('') }}
-              >
-                <Row align="middle" gutter={8}>
-                  <Col style={{ fontSize: 20, color: '#1677ff' }}>{opt.icon}</Col>
-                  <Col>
-                    <div style={{ fontWeight: 600 }}>{opt.label}</div>
-                    <div style={{ fontSize: 12, color: '#888' }}>{opt.description}</div>
-                  </Col>
-                </Row>
-              </Card>
+      <Card bordered={false} className="rounded-xl mb-4" title="高值耗材追溯">
+        {/* 模式选择 */}
+        <Row gutter={16} className="mb-5">
+          {TRACE_OPTIONS.map(opt => {
+            const active = traceType === opt.key
+            return (
+              <Col span={8} key={opt.key}>
+                <div
+                  onClick={() => { setTraceType(opt.key as any); setResult(null); setSearchValue('') }}
+                  style={{
+                    cursor: 'pointer',
+                    borderRadius: 10,
+                    padding: '16px 20px',
+                    border: `2px solid ${active ? opt.color : '#f0f0f0'}`,
+                    background: active ? opt.bg : '#fafafa',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 14,
+                    transition: 'all 0.2s',
+                    position: 'relative',
+                    userSelect: 'none',
+                  }}
+                >
+                  {/* 图标圆形背景 */}
+                  <div style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: '50%',
+                    background: active ? opt.color : '#d9d9d9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    transition: 'background 0.2s',
+                  }}>
+                    {opt.icon}
+                  </div>
+                  {/* 文字信息 */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontWeight: 600,
+                      fontSize: 15,
+                      color: active ? opt.color : '#333',
+                      marginBottom: 2,
+                    }}>{opt.label}</div>
+                    <div style={{ fontSize: 12, color: '#888', lineHeight: '18px' }}>{opt.description}</div>
+                  </div>
+                  {/* 已选中角标 */}
+                  {active && (
+                    <CheckCircleFilled style={{
+                      position: 'absolute',
+                      top: 10,
+                      right: 12,
+                      fontSize: 16,
+                      color: opt.color,
+                    }} />
+                  )}
+                </div>
+              </Col>
+            )
+          })}
+        </Row>
+
+        {/* 搜索区域 */}
+        <div style={{
+          background: '#f7f8fa',
+          borderRadius: 8,
+          padding: '16px 20px',
+        }}>
+          <Row gutter={10} align="middle">
+            <Col flex="1">
+              <Input
+                size="large"
+                placeholder={currentOption.placeholder}
+                prefix={<SearchOutlined style={{ color: '#bbb' }} />}
+                value={searchValue}
+                onChange={e => setSearchValue(e.target.value)}
+                onPressEnter={handleSearch}
+                allowClear
+                onClear={() => { setSearchValue(''); setResult(null) }}
+                style={{ borderRadius: 8 }}
+              />
             </Col>
-          ))}
-        </Row>
-        <Row gutter={8}>
-          <Col flex="1">
-            <Input
-              size="large"
-              placeholder={currentOption.placeholder}
-              prefix={<SearchOutlined />}
-              value={searchValue}
-              onChange={e => setSearchValue(e.target.value)}
-              onPressEnter={handleSearch}
-              allowClear onClear={() => { setSearchValue(''); setResult(null) }}
-            />
-          </Col>
-          <Col>
-            <Button type="primary" size="large" icon={<SearchOutlined />} onClick={handleSearch} loading={loading}>
-              追溯查询
-            </Button>
-          </Col>
-        </Row>
+            <Col>
+              <Button
+                type="primary"
+                size="large"
+                icon={<SearchOutlined />}
+                onClick={handleSearch}
+                loading={loading}
+                style={{ borderRadius: 8, paddingInline: 28 }}
+              >
+                追溯查询
+              </Button>
+            </Col>
+          </Row>
+        </div>
       </Card>
 
-      <Card bordered={false} style={{ borderRadius: 12 }}>
+      {/* 结果区域 */}
+      <Card bordered={false} className="rounded-xl">
         <Spin spinning={loading}>
           {!result && !loading && (
-            <Empty description="请输入查询条件开始追溯" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            <div style={{ padding: '40px 0' }}>
+              <Empty
+                description={
+                  <span style={{ color: '#999' }}>请选择追溯类型并输入查询条件</span>
+                }
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+            </div>
           )}
 
           {result && traceType === 'patient' && (
             <>
-              <Alert type="info" message={`患者 ${searchValue} 的耗材使用追溯结果`} style={{ marginBottom: 16 }} />
+              <Alert
+                type="info"
+                showIcon
+                message={`患者 ${searchValue} 的耗材使用追溯结果`}
+                style={{ marginBottom: 16, borderRadius: 8 }}
+              />
               <Table
                 rowKey="surgeryNo"
                 columns={surgeryColumns}
                 dataSource={(result.surgeries || []) as SurgeryVO[]}
                 expandable={{
                   expandedRowRender: (record: SurgeryVO) => (
-                    <Table rowKey="id" columns={bindingColumns} dataSource={record.bindings || []} pagination={false} />
+                    <Table
+                      rowKey="id"
+                      columns={bindingColumns}
+                      dataSource={record.bindings || []}
+                      pagination={false}
+                      size="small"
+                    />
                   ),
                 }}
                 pagination={false}
@@ -132,7 +232,12 @@ export default function PatientTracePage() {
 
           {result && traceType === 'udi' && result.udi && (
             <>
-              <Alert type="info" message={`UDI 码 ${searchValue} 完整追溯链`} style={{ marginBottom: 16 }} />
+              <Alert
+                type="info"
+                showIcon
+                message={`UDI 码 ${searchValue} 完整追溯链`}
+                style={{ marginBottom: 16, borderRadius: 8 }}
+              />
               <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
                 <Descriptions.Item label="UDI 码">{result.udi.udiCode}</Descriptions.Item>
                 <Descriptions.Item label="耗材">{result.udi.materialName}（{result.udi.specification}）</Descriptions.Item>
@@ -146,8 +251,13 @@ export default function PatientTracePage() {
               </Descriptions>
               {result.surgeries && result.surgeries.length > 0 && (
                 <>
-                  <Typography.Title level={5}>手术使用记录</Typography.Title>
-                  <Table rowKey="surgeryNo" columns={surgeryColumns} dataSource={result.surgeries as SurgeryVO[]} pagination={false} />
+                  <Typography.Title level={5} style={{ marginBottom: 12 }}>手术使用记录</Typography.Title>
+                  <Table
+                    rowKey="surgeryNo"
+                    columns={surgeryColumns}
+                    dataSource={result.surgeries as SurgeryVO[]}
+                    pagination={false}
+                  />
                 </>
               )}
             </>
@@ -155,7 +265,12 @@ export default function PatientTracePage() {
 
           {result && traceType === 'material' && (
             <>
-              <Alert type="info" message={`耗材 ID：${searchValue} 的使用追溯结果`} style={{ marginBottom: 16 }} />
+              <Alert
+                type="info"
+                showIcon
+                message={`耗材 ID：${searchValue} 的使用追溯结果`}
+                style={{ marginBottom: 16, borderRadius: 8 }}
+              />
               <Table
                 rowKey={(r: any) => r.surgeryNo || r.id}
                 columns={[

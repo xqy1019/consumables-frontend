@@ -24,6 +24,12 @@ export const purchaseApi = {
   rejectRequisition: (id: number, remark?: string) =>
     request.put<unknown, void>(`/purchase/requisitions/${id}/reject`, { remark }),
 
+  receiveGoods: (id: number, items: {
+    materialId: number; quantity: number; batchNumber?: string;
+    supplierId?: number; location?: string; manufactureDate?: string; expiryDate?: string
+  }[]) =>
+    request.post<unknown, void>(`/purchase/requisitions/${id}/receive`, items),
+
   // 询价单
   getInquiries: (params?: { keyword?: string; status?: string; page?: number; size?: number }) =>
     request.get<unknown, PageResult<InquiryVO>>('/purchase/inquiries', { params }),

@@ -1,5 +1,5 @@
 import request from './request'
-import type { User, Role, Department, Supplier, PageResult, DashboardData } from '@/types'
+import type { User, Role, Department, Supplier, PageResult, DashboardData, Permission } from '@/types'
 
 // 用户
 export const usersApi = {
@@ -23,6 +23,10 @@ export const rolesApi = {
   update: (id: number, data: { roleName: string; description?: string }) =>
     request.put<unknown, Role>(`/roles/${id}`, data),
   delete: (id: number) => request.delete<unknown, void>(`/roles/${id}`),
+  // 权限管理
+  getAllPermissions: () => request.get<unknown, Permission[]>('/roles/permissions'),
+  assignPermissions: (id: number, permissionIds: number[]) =>
+    request.put<unknown, Role>(`/roles/${id}/permissions`, { permissionIds }),
 }
 
 // 科室

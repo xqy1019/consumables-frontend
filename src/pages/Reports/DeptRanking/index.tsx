@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Card, Row, Col, Typography, Radio, Table, Spin } from 'antd'
+import { Card, Row, Col, Radio, Table, Spin, Button, Alert, Space } from 'antd'
+import { RobotOutlined } from '@ant-design/icons'
 import * as echarts from 'echarts'
 import { reportsApi } from '@/api/reports'
+import { aiApi } from '@/api/ai'
 import type { DeptRanking } from '@/types'
 import type { ColumnsType } from 'antd/es/table'
 
@@ -12,6 +14,24 @@ export default function DeptRankingPage() {
   const [data, setData] = useState<DeptRanking[]>([])
   const [days, setDays] = useState(30)
   const [loading, setLoading] = useState(false)
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
+
+  const handleAiAnalyze = async () => {
+    if (data.length === 0) return
+    setAiLoading(true)
+    try {
+      const summary = data.slice(0, 10).map((d, i) =>
+        `第${i + 1}名 ${d.deptName || '未知科室'}: 消耗${d.totalQuantity}件，金额¥${(d.totalAmount || 0).toFixed(0)}`
+      ).join('\n')
+      const result = await aiApi.analyzeReport(`科室消耗排名（近${days}天）`, summary)
+      setAiAnalysis(result || '暂时无法获取 AI 解读，请稍后再试。')
+    } catch {
+      setAiAnalysis('AI 解读请求失败，请检查网络后重试。')
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   const fetchData = async (d: number) => {
     setLoading(true)
@@ -79,11 +99,17 @@ export default function DeptRankingPage() {
         className="rounded-xl mb-4"
         title="科室消耗排名"
         extra={
-          <Radio.Group value={days} onChange={e => setDays(e.target.value)}>
-            <Radio.Button value={7}>近7天</Radio.Button>
-            <Radio.Button value={30}>近30天</Radio.Button>
-            <Radio.Button value={90}>近90天</Radio.Button>
-          </Radio.Group>
+          <Space>
+            <Radio.Group value={days} onChange={e => setDays(e.target.value)}>
+              <Radio.Button value={7}>近7天</Radio.Button>
+              <Radio.Button value={30}>近30天</Radio.Button>
+              <Radio.Button value={90}>近90天</Radio.Button>
+            </Radio.Group>
+            <Button icon={<RobotOutlined />} loading={aiLoading} onClick={handleAiAnalyze}
+              style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', border: 'none' }}>
+              AI 解读
+            </Button>
+          </Space>
         }
       />
       <Row gutter={16}>
@@ -104,6 +130,14 @@ export default function DeptRankingPage() {
           </Card>
         </Col>
       </Row>
+      {aiAnalysis && (
+        <Alert
+          type="info" icon={<RobotOutlined />} showIcon
+          style={{ marginTop: 16, borderRadius: 8, background: '#f5f0ff', borderColor: '#c4b5fd' }}
+          message={<span style={{ fontWeight: 600, color: '#7c3aed' }}>Claude AI 解读</span>}
+          description={<div style={{ whiteSpace: 'pre-wrap', color: '#374151', lineHeight: 1.8, marginTop: 4 }}>{aiAnalysis}</div>}
+        />
+      )}
     </div>
   )
 }

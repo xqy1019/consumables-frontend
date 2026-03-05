@@ -3,18 +3,20 @@ import {
   Table, Button, Space, Modal, Form, Input, message, Card, Row, Col,
   Tag, Drawer, Descriptions, InputNumber, DatePicker, Select,
 } from 'antd'
-import { PlusOutlined, EyeOutlined, CheckOutlined, CloseOutlined, SendOutlined } from '@ant-design/icons'
+import { PlusOutlined, EyeOutlined, CheckOutlined, CloseOutlined, SendOutlined, InboxOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import dayjs from 'dayjs'
 import { purchaseApi } from '@/api/purchase'
 import { materialsApi } from '@/api/materials'
-import { departmentsApi } from '@/api/system'
-import type { RequisitionVO, PurchaseRequisitionItemVO, Material, Department } from '@/types'
+import { departmentsApi, suppliersApi } from '@/api/system'
+import type { RequisitionVO, PurchaseRequisitionItemVO, Material, Department, Supplier } from '@/types'
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   DRAFT: { label: '草稿', color: 'default' },
   PENDING: { label: '待审批', color: 'processing' },
   APPROVED: { label: '已审批', color: 'success' },
   REJECTED: { label: '已驳回', color: 'error' },
+  RECEIVED: { label: '已收货', color: 'cyan' },
 }
 
 export default function PurchaseRequisitionPage() {
@@ -27,8 +29,13 @@ export default function PurchaseRequisitionPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
   const [currentRecord, setCurrentRecord] = useState<RequisitionVO | null>(null)
+  const [receiveOpen, setReceiveOpen] = useState(false)
+  const [receiveLoading, setReceiveLoading] = useState(false)
+  const [receiveRecord, setReceiveRecord] = useState<RequisitionVO | null>(null)
+  const [receiveItems, setReceiveItems] = useState<any[]>([])
   const [materials, setMaterials] = useState<Material[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [form] = Form.useForm()
 
   const fetchData = async () => {
@@ -44,6 +51,7 @@ export default function PurchaseRequisitionPage() {
   useEffect(() => {
     materialsApi.getActive().then(setMaterials)
     departmentsApi.getAll().then(setDepartments)
+    suppliersApi.getActive().then(setSuppliers)
   }, [])
 
   const handleCreate = async (values: any) => {
@@ -91,6 +99,44 @@ export default function PurchaseRequisitionPage() {
     setDetailOpen(true)
   }
 
+  const handleOpenReceive = async (record: RequisitionVO) => {
+    const detail = await purchaseApi.getRequisitionDetail(record.id)
+    setReceiveRecord(detail)
+    setReceiveItems((detail.items || []).map((item: PurchaseRequisitionItemVO) => ({
+      materialId: item.materialId,
+      materialName: item.materialName,
+      specification: item.specification,
+      unit: item.unit,
+      quantity: item.quantity,
+      batchNumber: '',
+      supplierId: null,
+      location: '',
+      expiryDate: null,
+    })))
+    setReceiveOpen(true)
+  }
+
+  const handleReceiveGoods = async () => {
+    setReceiveLoading(true)
+    try {
+      const items = receiveItems.map(item => ({
+        materialId: item.materialId,
+        quantity: item.quantity,
+        batchNumber: item.batchNumber || undefined,
+        supplierId: item.supplierId || undefined,
+        location: item.location || undefined,
+        expiryDate: item.expiryDate ? dayjs(item.expiryDate).format('YYYY-MM-DD') : undefined,
+      }))
+      await purchaseApi.receiveGoods(receiveRecord!.id, items)
+      message.success('收货入库成功，库存已更新')
+      setReceiveOpen(false)
+      fetchData()
+    } catch {
+    } finally {
+      setReceiveLoading(false)
+    }
+  }
+
   const columns: ColumnsType<RequisitionVO> = [
     { title: '请购单号', dataIndex: 'reqNo', width: 180 },
     { title: '科室', dataIndex: 'deptName', width: 120 },
@@ -119,6 +165,11 @@ export default function PurchaseRequisitionPage() {
               <Button size="small" danger icon={<CloseOutlined />}
                 onClick={() => handleReject(record.id)}>驳回</Button>
             </>
+          )}
+          {record.status === 'APPROVED' && (
+            <Button size="small" type="primary" icon={<InboxOutlined />}
+              style={{ background: '#13c2c2', borderColor: '#13c2c2' }}
+              onClick={() => handleOpenReceive(record)}>收货入库</Button>
           )}
         </Space>
       ),
@@ -254,6 +305,93 @@ export default function PurchaseRequisitionPage() {
             <Table rowKey="id" columns={itemColumns} dataSource={currentRecord.items || []} pagination={false} />
           </>
         )}
+      </Drawer>
+
+      {/* 收货入库 Drawer */}
+      <Drawer
+        title={<Space><InboxOutlined style={{ color: '#13c2c2' }} />收货入库 — {receiveRecord?.reqNo}</Space>}
+        open={receiveOpen} onClose={() => setReceiveOpen(false)} width={860}
+        footer={
+          <div style={{ textAlign: 'right' }}>
+            <Button onClick={() => setReceiveOpen(false)} style={{ marginRight: 8 }}>取消</Button>
+            <Button type="primary" loading={receiveLoading} onClick={handleReceiveGoods}
+              style={{ background: '#13c2c2', borderColor: '#13c2c2' }}>
+              确认收货入库
+            </Button>
+          </div>
+        }
+      >
+        <div style={{ marginBottom: 12, color: '#666', fontSize: 13 }}>
+          请核对并补充每行耗材的批号、有效期等收货信息后提交，系统将自动增加对应库存。
+        </div>
+        <Table
+          rowKey="materialId"
+          dataSource={receiveItems}
+          pagination={false}
+          size="small"
+          columns={[
+            { title: '耗材名称', dataIndex: 'materialName', width: 140 },
+            { title: '规格', dataIndex: 'specification', width: 100 },
+            { title: '单位', dataIndex: 'unit', width: 60 },
+            {
+              title: '收货数量', dataIndex: 'quantity', width: 100,
+              render: (v, _, idx) => (
+                <InputNumber min={1} value={v} style={{ width: '100%' }}
+                  onChange={val => {
+                    const arr = [...receiveItems]
+                    arr[idx].quantity = val
+                    setReceiveItems(arr)
+                  }} />
+              ),
+            },
+            {
+              title: '批号', dataIndex: 'batchNumber', width: 130,
+              render: (v, _, idx) => (
+                <Input value={v} placeholder="选填" style={{ width: '100%' }}
+                  onChange={e => {
+                    const arr = [...receiveItems]
+                    arr[idx].batchNumber = e.target.value
+                    setReceiveItems(arr)
+                  }} />
+              ),
+            },
+            {
+              title: '有效期', dataIndex: 'expiryDate', width: 140,
+              render: (v, _, idx) => (
+                <DatePicker value={v ? dayjs(v) : null} style={{ width: '100%' }}
+                  onChange={date => {
+                    const arr = [...receiveItems]
+                    arr[idx].expiryDate = date ? date.format('YYYY-MM-DD') : null
+                    setReceiveItems(arr)
+                  }} />
+              ),
+            },
+            {
+              title: '供应商', dataIndex: 'supplierId', width: 140,
+              render: (v, _, idx) => (
+                <Select value={v} allowClear placeholder="选填" style={{ width: '100%' }}
+                  onChange={val => {
+                    const arr = [...receiveItems]
+                    arr[idx].supplierId = val
+                    setReceiveItems(arr)
+                  }}>
+                  {suppliers.map(s => <Select.Option key={s.id} value={s.id}>{s.supplierName}</Select.Option>)}
+                </Select>
+              ),
+            },
+            {
+              title: '库位', dataIndex: 'location', width: 100,
+              render: (v, _, idx) => (
+                <Input value={v} placeholder="选填"
+                  onChange={e => {
+                    const arr = [...receiveItems]
+                    arr[idx].location = e.target.value
+                    setReceiveItems(arr)
+                  }} />
+              ),
+            },
+          ]}
+        />
       </Drawer>
     </div>
   )

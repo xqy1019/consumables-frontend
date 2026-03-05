@@ -7,6 +7,7 @@ interface AuthState {
   username: string | null
   realName: string | null
   roles: string[]
+  permissions: string[]
   isAuthenticated: boolean
 }
 
@@ -21,6 +22,7 @@ const initialState: AuthState = {
   username: user.username ?? null,
   realName: user.realName ?? null,
   roles: user.roles ?? [],
+  permissions: user.permissions ?? [],
   isAuthenticated: !!token,
 }
 
@@ -29,12 +31,13 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     setCredentials: (state, action: PayloadAction<LoginResponse>) => {
-      const { token, userId, username, realName, roles } = action.payload
+      const { token, userId, username, realName, roles, permissions } = action.payload
       state.token = token
       state.userId = userId
       state.username = username
       state.realName = realName
       state.roles = roles
+      state.permissions = permissions ?? []
       state.isAuthenticated = true
       localStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(action.payload))
@@ -45,6 +48,7 @@ const authSlice = createSlice({
       state.username = null
       state.realName = null
       state.roles = []
+      state.permissions = []
       state.isAuthenticated = false
       localStorage.removeItem('token')
       localStorage.removeItem('user')

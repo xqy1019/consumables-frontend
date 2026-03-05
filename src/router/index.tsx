@@ -11,7 +11,6 @@ import UsersPage from '@/pages/System/Users'
 import RolesPage from '@/pages/System/Roles'
 import DepartmentsPage from '@/pages/System/Departments'
 import SuppliersPage from '@/pages/System/Suppliers'
-// 新增页面
 import DictPage from '@/pages/Dict'
 import StocktakingPage from '@/pages/Inventory/Stocktaking'
 import TransferPage from '@/pages/Inventory/Transfer'
@@ -29,58 +28,146 @@ import TrendPage from '@/pages/Reports/Trend'
 import DeptRankingPage from '@/pages/Reports/DeptRanking'
 import CostAnalysisPage from '@/pages/Reports/CostAnalysis'
 import BIScreenPage from '@/pages/Reports/BIScreen'
+import ForbiddenPage from '@/pages/Forbidden'
 
-// 路由守卫组件
 import { useSelector } from 'react-redux'
 import type { RootState } from '@/store'
 
+// 登录守卫
 function RequireAuth({ children }: { children: JSX.Element }) {
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated)
   if (!isAuthenticated) return <Navigate to="/login" replace />
   return children
 }
 
+// 权限守卫：检查用户是否有指定权限（管理员默认拥有所有权限）
+function RequirePermission({ permission, children }: { permission: string; children: JSX.Element }) {
+  const { roles, permissions } = useSelector((state: RootState) => state.auth)
+  const isAdmin = roles.includes('ADMIN')
+  if (isAdmin || permissions.includes(permission)) return children
+  return <ForbiddenPage />
+}
+
 export const routes: RouteObject[] = [
   { path: '/login', element: <Login /> },
+  { path: '/403', element: <ForbiddenPage /> },
   {
     path: '/',
     element: <RequireAuth><MainLayout /></RequireAuth>,
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <Dashboard /> },
-      { path: 'materials', element: <MaterialsPage /> },
-      { path: 'dict', element: <DictPage /> },
+      {
+        path: 'materials',
+        element: <RequirePermission permission="menu:material"><MaterialsPage /></RequirePermission>,
+      },
+      {
+        path: 'dict',
+        element: <RequirePermission permission="menu:dict"><DictPage /></RequirePermission>,
+      },
       // 库存管理
-      { path: 'inventory', element: <InventoryPage /> },
-      { path: 'inventory/stocktaking', element: <StocktakingPage /> },
-      { path: 'inventory/transfer', element: <TransferPage /> },
-      { path: 'inventory/damage', element: <DamagePage /> },
-      { path: 'inventory/borrowing', element: <BorrowingPage /> },
+      {
+        path: 'inventory',
+        element: <RequirePermission permission="menu:inventory"><InventoryPage /></RequirePermission>,
+      },
+      {
+        path: 'inventory/stocktaking',
+        element: <RequirePermission permission="menu:inventory"><StocktakingPage /></RequirePermission>,
+      },
+      {
+        path: 'inventory/transfer',
+        element: <RequirePermission permission="menu:inventory"><TransferPage /></RequirePermission>,
+      },
+      {
+        path: 'inventory/damage',
+        element: <RequirePermission permission="menu:inventory"><DamagePage /></RequirePermission>,
+      },
+      {
+        path: 'inventory/borrowing',
+        element: <RequirePermission permission="menu:inventory"><BorrowingPage /></RequirePermission>,
+      },
       // 申领管理
-      { path: 'requisitions', element: <RequisitionsPage /> },
-      { path: 'requisitions/create', element: <CreateRequisition /> },
-      { path: 'requisitions/:id', element: <RequisitionDetail /> },
-      // 高值耗材追溯
-      { path: 'tracing/udi', element: <UdiPage /> },
-      { path: 'tracing/surgery', element: <SurgeryPage /> },
-      { path: 'tracing/patient', element: <PatientTracePage /> },
-      // AI 预测
-      { path: 'ai/prediction', element: <PredictionPage /> },
-      { path: 'ai/warnings', element: <WarningsPage /> },
+      {
+        path: 'requisitions',
+        element: <RequirePermission permission="menu:requisition"><RequisitionsPage /></RequirePermission>,
+      },
+      {
+        path: 'requisitions/create',
+        element: <RequirePermission permission="menu:requisition"><CreateRequisition /></RequirePermission>,
+      },
+      {
+        path: 'requisitions/:id',
+        element: <RequirePermission permission="menu:requisition"><RequisitionDetail /></RequirePermission>,
+      },
+      // 高值追溯
+      {
+        path: 'tracing/udi',
+        element: <RequirePermission permission="menu:tracing"><UdiPage /></RequirePermission>,
+      },
+      {
+        path: 'tracing/surgery',
+        element: <RequirePermission permission="menu:tracing"><SurgeryPage /></RequirePermission>,
+      },
+      {
+        path: 'tracing/patient',
+        element: <RequirePermission permission="menu:tracing"><PatientTracePage /></RequirePermission>,
+      },
+      // AI
+      {
+        path: 'ai/prediction',
+        element: <RequirePermission permission="menu:ai"><PredictionPage /></RequirePermission>,
+      },
+      {
+        path: 'ai/warnings',
+        element: <RequirePermission permission="menu:ai"><WarningsPage /></RequirePermission>,
+      },
       // 采购管理
-      { path: 'purchase/requisition', element: <PurchaseRequisitionPage /> },
-      { path: 'purchase/inquiry', element: <InquiryPage /> },
-      { path: 'purchase/contract', element: <ContractPage /> },
+      {
+        path: 'purchase/requisition',
+        element: <RequirePermission permission="menu:purchase"><PurchaseRequisitionPage /></RequirePermission>,
+      },
+      {
+        path: 'purchase/inquiry',
+        element: <RequirePermission permission="menu:purchase"><InquiryPage /></RequirePermission>,
+      },
+      {
+        path: 'purchase/contract',
+        element: <RequirePermission permission="menu:purchase"><ContractPage /></RequirePermission>,
+      },
       // 报表
-      { path: 'reports/trend', element: <TrendPage /> },
-      { path: 'reports/dept-ranking', element: <DeptRankingPage /> },
-      { path: 'reports/cost-analysis', element: <CostAnalysisPage /> },
-      { path: 'reports/bi-screen', element: <BIScreenPage /> },
+      {
+        path: 'reports/trend',
+        element: <RequirePermission permission="menu:report"><TrendPage /></RequirePermission>,
+      },
+      {
+        path: 'reports/dept-ranking',
+        element: <RequirePermission permission="menu:report"><DeptRankingPage /></RequirePermission>,
+      },
+      {
+        path: 'reports/cost-analysis',
+        element: <RequirePermission permission="menu:report"><CostAnalysisPage /></RequirePermission>,
+      },
+      {
+        path: 'reports/bi-screen',
+        element: <RequirePermission permission="menu:report"><BIScreenPage /></RequirePermission>,
+      },
       // 系统管理
-      { path: 'system/users', element: <UsersPage /> },
-      { path: 'system/roles', element: <RolesPage /> },
-      { path: 'system/departments', element: <DepartmentsPage /> },
-      { path: 'system/suppliers', element: <SuppliersPage /> },
+      {
+        path: 'system/users',
+        element: <RequirePermission permission="menu:system:user"><UsersPage /></RequirePermission>,
+      },
+      {
+        path: 'system/roles',
+        element: <RequirePermission permission="menu:system:role"><RolesPage /></RequirePermission>,
+      },
+      {
+        path: 'system/departments',
+        element: <RequirePermission permission="menu:department"><DepartmentsPage /></RequirePermission>,
+      },
+      {
+        path: 'system/suppliers',
+        element: <RequirePermission permission="menu:supplier"><SuppliersPage /></RequirePermission>,
+      },
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },

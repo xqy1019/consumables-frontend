@@ -28,6 +28,16 @@ export interface User {
   createTime: string
 }
 
+// 权限
+export interface Permission {
+  id: number
+  permissionCode: string
+  permissionName: string
+  type: 'menu' | 'action'
+  description: string
+  sortOrder: number
+}
+
 // 角色
 export interface Role {
   id: number
@@ -36,6 +46,7 @@ export interface Role {
   description: string
   status: number
   createTime: string
+  permissions?: Permission[]
 }
 
 // 科室
@@ -153,6 +164,7 @@ export interface LoginResponse {
   username: string
   realName: string
   roles: string[]
+  permissions: string[]
 }
 
 // Dashboard
@@ -358,6 +370,61 @@ export interface TraceResult {
   usages?: object[]
   transactions?: object[]
   udi?: UdiVO
+}
+
+// ============ AI 工作台统一分析 ============
+export interface AiWarningVO {
+  materialName: string
+  severity: string
+  type: string
+  message: string
+  aiReason: string
+  currentValue: number
+  threshold: number
+  daysLeft: number | null
+}
+
+export interface AiSuggestionVO {
+  materialName: string
+  currentStock: number
+  shortage: number
+  suggestedPurchase: number
+  priority: string
+  aiReason: string
+}
+
+export interface ModuleStatusVO {
+  module: string
+  status: string   // ok | warn | error
+  desc: string
+}
+
+export interface AiDashboardAnalysis {
+  insight: string
+  healthScore: number
+  healthLabel: string
+  warnings: AiWarningVO[]
+  suggestions: AiSuggestionVO[]
+  moduleStatus: ModuleStatusVO[]
+}
+
+// ============ AI 对话助手 ============
+export interface ChatAction {
+  type: 'navigate' | 'open_purchase'
+  path?: string
+}
+
+export interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  action?: ChatAction
+  loading?: boolean
+}
+
+export interface ChatResponse {
+  reply: string
+  action?: ChatAction
 }
 
 // ============ AI 预测 ============

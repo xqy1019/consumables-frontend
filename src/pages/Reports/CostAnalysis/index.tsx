@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Card, Row, Col, Typography, Radio, Spin, Statistic } from 'antd'
+import { Card, Row, Col, Radio, Spin, Statistic, Button, Alert } from 'antd'
+import { RobotOutlined } from '@ant-design/icons'
 import * as echarts from 'echarts'
 import { reportsApi } from '@/api/reports'
+import { aiApi } from '@/api/ai'
 import type { CostAnalysis } from '@/types'
 
 
@@ -11,6 +13,24 @@ export default function CostAnalysisPage() {
   const [data, setData] = useState<CostAnalysis[]>([])
   const [months, setMonths] = useState(6)
   const [loading, setLoading] = useState(false)
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
+
+  const handleAiAnalyze = async () => {
+    if (data.length === 0) return
+    setAiLoading(true)
+    try {
+      const summary = data.map(d =>
+        `${d.month}: 消耗成本¥${d.consumptionCost?.toFixed(0) ?? 0}, 采购成本¥${d.purchaseCost?.toFixed(0) ?? 0}`
+      ).join('\n')
+      const result = await aiApi.analyzeReport('成本分析', summary)
+      setAiAnalysis(result || '暂时无法获取 AI 解读，请稍后再试。')
+    } catch {
+      setAiAnalysis('AI 解读请求失败，请检查网络后重试。')
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   const fetchData = async (m: number) => {
     setLoading(true)
@@ -102,10 +122,29 @@ export default function CostAnalysisPage() {
           </Card>
         </Col>
       </Row>
-      <Card bordered={false} className="rounded-xl">
+      <Card
+        bordered={false}
+        className="rounded-xl"
+        extra={
+          <Button icon={<RobotOutlined />} loading={aiLoading} onClick={handleAiAnalyze}
+            style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', border: 'none' }}>
+            AI 智能解读
+          </Button>
+        }
+      >
         <Spin spinning={loading}>
           <div ref={chartRef} className="h-[400px]" />
         </Spin>
+        {aiAnalysis && (
+          <Alert
+            type="info"
+            icon={<RobotOutlined />}
+            showIcon
+            style={{ marginTop: 16, borderRadius: 8, background: '#f5f0ff', borderColor: '#c4b5fd' }}
+            message={<span style={{ fontWeight: 600, color: '#7c3aed' }}>Claude AI 解读</span>}
+            description={<div style={{ whiteSpace: 'pre-wrap', color: '#374151', lineHeight: 1.8, marginTop: 4 }}>{aiAnalysis}</div>}
+          />
+        )}
       </Card>
     </div>
   )

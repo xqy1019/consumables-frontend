@@ -44,6 +44,8 @@ import {
   FundOutlined,
   DesktopOutlined,
   HomeOutlined,
+  AlertOutlined,
+  RollbackOutlined,
 } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "@/store/slices/authSlice";
@@ -115,37 +117,7 @@ const StyledContent = styled(Content)`
 // 全量菜单定义，每项携带所需权限码（无 permission 字段则表示所有人可见）
 const ALL_MENU_ITEMS = [
   { key: "/dashboard", icon: <DashboardOutlined />, label: "工作台" },
-  {
-    key: "/basic",
-    icon: <BookOutlined />,
-    label: "基础数据",
-    children: [
-      {
-        key: "/materials",
-        icon: <MedicineBoxOutlined />,
-        label: "耗材目录",
-        permission: "menu:material",
-      },
-      {
-        key: "/dict",
-        icon: <BookOutlined />,
-        label: "字典管理",
-        permission: "menu:dict",
-      },
-      {
-        key: "/system/suppliers",
-        icon: <ShopOutlined />,
-        label: "供应商",
-        permission: "menu:supplier",
-      },
-      {
-        key: "/system/departments",
-        icon: <ApartmentOutlined />,
-        label: "科室管理",
-        permission: "menu:department",
-      },
-    ],
-  },
+
   {
     key: "/inv",
     icon: <DatabaseOutlined />,
@@ -169,6 +141,11 @@ const ALL_MENU_ITEMS = [
         icon: <RetweetOutlined />,
         label: "耗材借用",
       },
+      {
+        key: "/inventory/return",
+        icon: <RollbackOutlined />,
+        label: "退料申请",
+      },
     ],
   },
   {
@@ -178,29 +155,10 @@ const ALL_MENU_ITEMS = [
     permission: "menu:requisition",
   },
   {
-    key: "/tracing",
-    icon: <QrcodeOutlined />,
-    label: "高值追溯",
-    permission: "menu:tracing",
-    children: [
-      { key: "/tracing/udi", icon: <QrcodeOutlined />, label: "UDI管理" },
-      {
-        key: "/tracing/surgery",
-        icon: <ExperimentOutlined />,
-        label: "手术记录",
-      },
-      { key: "/tracing/patient", icon: <SearchOutlined />, label: "全链追溯" },
-    ],
-  },
-  {
-    key: "/ai",
-    icon: <RobotOutlined />,
-    label: "AI 智能",
-    permission: "menu:ai",
-    children: [
-      { key: "/ai/prediction", icon: <RobotOutlined />, label: "需求预测" },
-      { key: "/ai/warnings", icon: <WarningOutlined />, label: "预警中心" },
-    ],
+    key: "/recall",
+    icon: <AlertOutlined />,
+    label: "召回管理",
+    permission: "menu:inventory",
   },
   {
     key: "/purchase",
@@ -219,6 +177,21 @@ const ALL_MENU_ITEMS = [
         icon: <ShoppingCartOutlined />,
         label: "采购合同",
       },
+    ],
+  },
+  {
+    key: "/tracing",
+    icon: <QrcodeOutlined />,
+    label: "高值追溯",
+    permission: "menu:tracing",
+    children: [
+      { key: "/tracing/udi", icon: <QrcodeOutlined />, label: "UDI管理" },
+      {
+        key: "/tracing/surgery",
+        icon: <ExperimentOutlined />,
+        label: "手术记录",
+      },
+      { key: "/tracing/patient", icon: <SearchOutlined />, label: "全链追溯" },
     ],
   },
   {
@@ -246,6 +219,47 @@ const ALL_MENU_ITEMS = [
     ],
   },
   {
+    key: "/ai",
+    icon: <RobotOutlined />,
+    label: "AI 智能",
+    permission: "menu:ai",
+    children: [
+      { key: "/ai/prediction", icon: <RobotOutlined />, label: "需求预测" },
+      { key: "/ai/warnings", icon: <WarningOutlined />, label: "预警中心" },
+    ],
+  },
+  {
+    key: "/basic",
+    icon: <BookOutlined />,
+    label: "基础数据",
+    children: [
+      {
+        key: "/materials",
+        icon: <MedicineBoxOutlined />,
+        label: "耗材目录",
+        permission: "menu:material",
+      },
+      {
+        key: "/system/departments",
+        icon: <ApartmentOutlined />,
+        label: "科室管理",
+        permission: "menu:department",
+      },
+      {
+        key: "/system/suppliers",
+        icon: <ShopOutlined />,
+        label: "供应商",
+        permission: "menu:supplier",
+      },
+      {
+        key: "/dict",
+        icon: <BookOutlined />,
+        label: "字典管理",
+        permission: "menu:dict",
+      },
+    ],
+  },
+  {
     key: "/system",
     icon: <SettingOutlined />,
     label: "系统管理",
@@ -266,8 +280,16 @@ const ALL_MENU_ITEMS = [
   },
 ];
 
-const LEVEL_COLOR: Record<string, string> = { info: 'blue', warning: 'orange', error: 'red' }
-const LEVEL_LABEL: Record<string, string> = { info: '提示', warning: '待处理', error: '紧急' }
+const LEVEL_COLOR: Record<string, string> = {
+  info: "blue",
+  warning: "orange",
+  error: "red",
+};
+const LEVEL_LABEL: Record<string, string> = {
+  info: "提示",
+  warning: "待处理",
+  error: "紧急",
+};
 
 export default function MainLayout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -286,8 +308,10 @@ export default function MainLayout() {
     try {
       const res = await notificationsApi.getAll();
       setNotifications(res.items || []);
-    } catch {}
-    finally { setNotifLoading(false); }
+    } catch {
+    } finally {
+      setNotifLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -350,7 +374,9 @@ export default function MainLayout() {
     "/inventory/transfer": { parent: "库存管理", label: "库存移库" },
     "/inventory/damage": { parent: "库存管理", label: "库存报损" },
     "/inventory/borrowing": { parent: "库存管理", label: "耗材借用" },
+    "/inventory/return": { parent: "库存管理", label: "退料申请" },
     "/requisitions": { label: "申领管理" },
+    "/recall": { label: "召回管理" },
     "/tracing/udi": { parent: "高值追溯", label: "UDI管理" },
     "/tracing/surgery": { parent: "高值追溯", label: "手术记录" },
     "/tracing/patient": { parent: "高值追溯", label: "全链追溯" },
@@ -457,54 +483,102 @@ export default function MainLayout() {
             </span>
             <Popover
               open={notifOpen}
-              onOpenChange={v => { setNotifOpen(v); if (v) fetchNotifications(); }}
+              onOpenChange={(v) => {
+                setNotifOpen(v);
+                if (v) fetchNotifications();
+              }}
               trigger="click"
               placement="bottomRight"
               title={
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: 340 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    width: 340,
+                  }}
+                >
                   <span style={{ fontWeight: 600 }}>消息通知</span>
-                  <span style={{ fontSize: 12, color: token.colorTextSecondary }}>
+                  <span
+                    style={{ fontSize: 12, color: token.colorTextSecondary }}
+                  >
                     共 {notifications.length} 条
                   </span>
                 </div>
               }
               content={
-                <div style={{ width: 340, maxHeight: 400, overflowY: 'auto' }}>
+                <div style={{ width: 340, maxHeight: 400, overflowY: "auto" }}>
                   <Spin spinning={notifLoading}>
-                    {notifications.length === 0
-                      ? <Empty description="暂无通知" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: '24px 0' }} />
-                      : (
-                        <List
-                          size="small"
-                          dataSource={notifications}
-                          renderItem={item => (
-                            <List.Item
-                              style={{ cursor: item.linkPath ? 'pointer' : 'default', padding: '8px 0' }}
-                              onClick={() => {
-                                if (item.linkPath) { navigate(item.linkPath); setNotifOpen(false); }
-                              }}
-                            >
-                              <div style={{ width: '100%' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                                  <span style={{ fontWeight: 500, fontSize: 13 }}>{item.title}</span>
-                                  <Tag color={LEVEL_COLOR[item.level]} style={{ fontSize: 11, margin: 0 }}>
-                                    {LEVEL_LABEL[item.level]}
-                                  </Tag>
-                                </div>
-                                <div style={{ color: token.colorTextSecondary, fontSize: 12 }}>{item.content}</div>
+                    {notifications.length === 0 ? (
+                      <Empty
+                        description="暂无通知"
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        style={{ padding: "24px 0" }}
+                      />
+                    ) : (
+                      <List
+                        size="small"
+                        dataSource={notifications}
+                        renderItem={(item) => (
+                          <List.Item
+                            style={{
+                              cursor: item.linkPath ? "pointer" : "default",
+                              padding: "8px 0",
+                            }}
+                            onClick={() => {
+                              if (item.linkPath) {
+                                navigate(item.linkPath);
+                                setNotifOpen(false);
+                              }
+                            }}
+                          >
+                            <div style={{ width: "100%" }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  marginBottom: 2,
+                                }}
+                              >
+                                <span style={{ fontWeight: 500, fontSize: 13 }}>
+                                  {item.title}
+                                </span>
+                                <Tag
+                                  color={LEVEL_COLOR[item.level]}
+                                  style={{ fontSize: 11, margin: 0 }}
+                                >
+                                  {LEVEL_LABEL[item.level]}
+                                </Tag>
                               </div>
-                            </List.Item>
-                          )}
-                        />
-                      )
-                    }
+                              <div
+                                style={{
+                                  color: token.colorTextSecondary,
+                                  fontSize: 12,
+                                }}
+                              >
+                                {item.content}
+                              </div>
+                            </div>
+                          </List.Item>
+                        )}
+                      />
+                    )}
                   </Spin>
                 </div>
               }
             >
-              <Badge count={notifications.length} size="small" offset={[2, 0]} overflowCount={99}>
+              <Badge
+                count={notifications.length}
+                size="small"
+                offset={[2, 0]}
+                overflowCount={99}
+              >
                 <BellOutlined
-                  style={{ color: token.colorTextSecondary, fontSize: 16, cursor: 'pointer' }}
+                  style={{
+                    color: token.colorTextSecondary,
+                    fontSize: 16,
+                    cursor: "pointer",
+                  }}
                 />
               </Badge>
             </Popover>

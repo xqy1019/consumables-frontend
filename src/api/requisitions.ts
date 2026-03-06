@@ -26,4 +26,7 @@ export const requisitionsApi = {
 
   dispatch: (id: number) =>
     request.put<unknown, Requisition>(`/requisitions/${id}/dispatch`),
+
+  sign: (id: number, data: { remark?: string }) =>
+    request.put<unknown, Requisition>(`/requisitions/${id}/sign`, data),
 }

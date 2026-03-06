@@ -29,6 +29,8 @@ import DeptRankingPage from '@/pages/Reports/DeptRanking'
 import CostAnalysisPage from '@/pages/Reports/CostAnalysis'
 import BIScreenPage from '@/pages/Reports/BIScreen'
 import ForbiddenPage from '@/pages/Forbidden'
+import RecallPage from '@/pages/Recall'
+import ReturnPage from '@/pages/Inventory/Return'
 
 import { useSelector } from 'react-redux'
 import type { RootState } from '@/store'
@@ -86,6 +88,10 @@ export const routes: RouteObject[] = [
         path: 'inventory/borrowing',
         element: <RequirePermission permission="menu:inventory"><BorrowingPage /></RequirePermission>,
       },
+      {
+        path: 'inventory/return',
+        element: <RequirePermission permission="menu:inventory"><ReturnPage /></RequirePermission>,
+      },
       // 申领管理
       {
         path: 'requisitions',
@@ -98,6 +104,11 @@ export const routes: RouteObject[] = [
       {
         path: 'requisitions/:id',
         element: <RequirePermission permission="menu:requisition"><RequisitionDetail /></RequirePermission>,
+      },
+      // 召回管理
+      {
+        path: 'recall',
+        element: <RequirePermission permission="menu:inventory"><RecallPage /></RequirePermission>,
       },
       // 高值追溯
       {

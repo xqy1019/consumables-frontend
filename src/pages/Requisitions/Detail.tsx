@@ -7,7 +7,7 @@ import {
   ArrowLeftOutlined, CheckOutlined, CloseOutlined, SendOutlined,
   UserOutlined, CalendarOutlined, MedicineBoxOutlined,
   ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined,
-  FileTextOutlined, TeamOutlined,
+  FileTextOutlined, TeamOutlined, AuditOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
 import { requisitionsApi } from '@/api/requisitions'
@@ -25,6 +25,7 @@ const FLOW_STEPS = [
   { key: 'PENDING',    label: '待审批',  icon: <ClockCircleOutlined /> },
   { key: 'APPROVED',   label: '已审批',  icon: <CheckCircleOutlined /> },
   { key: 'DISPATCHED', label: '已发放',  icon: <MedicineBoxOutlined /> },
+  { key: 'SIGNED',     label: '已签收',  icon: <AuditOutlined /> },
 ]
 
 const STATUS_COLOR: Record<string, { bg: string; border: string; text: string }> = {
@@ -33,6 +34,7 @@ const STATUS_COLOR: Record<string, { bg: string; border: string; text: string }>
   APPROVED:   { bg: '#f0fdf4', border: '#bbf7d0', text: '#16a34a' },
   REJECTED:   { bg: '#fff5f5', border: '#fecaca', text: '#dc2626' },
   DISPATCHED: { bg: '#eff6ff', border: '#bfdbfe', text: '#2563eb' },
+  SIGNED:     { bg: '#f0fdf4', border: '#86efac', text: '#15803d' },
 }
 
 export default function RequisitionDetail() {
@@ -41,6 +43,7 @@ export default function RequisitionDetail() {
   const [loading, setLoading] = useState(true)
   const [approveModal, setApproveModal] = useState(false)
   const [rejectModal, setRejectModal] = useState(false)
+  const [signModal, setSignModal] = useState(false)
   const [remark, setRemark] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
   const navigate = useNavigate()
@@ -85,6 +88,16 @@ export default function RequisitionDetail() {
     } catch {} finally { setActionLoading(false) }
   }
 
+  const handleSign = async () => {
+    setActionLoading(true)
+    try {
+      await requisitionsApi.sign(Number(id), { remark })
+      message.success('签收成功')
+      setSignModal(false)
+      fetchData()
+    } catch {} finally { setActionLoading(false) }
+  }
+
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 400 }}>
       <Spin size="large" />
@@ -99,6 +112,7 @@ export default function RequisitionDetail() {
   const currentStepIdx = data.status === 'REJECTED'
     ? 1
     : FLOW_STEPS.findIndex(s => s.key === data.status)
+  const isSigned = data.status === 'SIGNED'
 
   return (
     <div>
@@ -169,6 +183,15 @@ export default function RequisitionDetail() {
                 style={{ borderRadius: 8 }}
               >
                 确认发放
+              </Button>
+            )}
+            {data.status === 'DISPATCHED' && (
+              <Button
+                type="primary" icon={<AuditOutlined />}
+                onClick={() => { setRemark(''); setSignModal(true) }}
+                style={{ borderRadius: 8, background: '#15803d' }}
+              >
+                确认签收
               </Button>
             )}
           </Space>
@@ -302,7 +325,7 @@ export default function RequisitionDetail() {
               {FLOW_STEPS.map((step, i) => {
                 const isRejected = data.status === 'REJECTED' && i === 1
                 const isDone = !isRejected && (
-                  data.status === 'DISPATCHED'
+                  (isSigned || data.status === 'DISPATCHED')
                     ? true
                     : currentStepIdx >= i
                 )
@@ -433,6 +456,25 @@ export default function RequisitionDetail() {
           rows={3} value={remark}
           onChange={(e) => setRemark(e.target.value)}
           placeholder="请输入驳回原因"
+        />
+      </Modal>
+
+      <Modal
+        title="确认签收"
+        open={signModal}
+        onCancel={() => setSignModal(false)}
+        onOk={handleSign}
+        confirmLoading={actionLoading}
+        okText="确认签收"
+        okButtonProps={{ icon: <AuditOutlined /> }}
+      >
+        <div style={{ marginBottom: 8, color: token.colorTextSecondary, fontSize: 13 }}>
+          签收说明：科室已收到发放的耗材，确认无误后点击签收。
+        </div>
+        <Input.TextArea
+          rows={3} value={remark}
+          onChange={(e) => setRemark(e.target.value)}
+          placeholder="签收备注（可选）"
         />
       </Modal>
     </div>

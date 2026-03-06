@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import {
   Card, Form, Select, DatePicker, Input, Button, Table, InputNumber,
-  Row, Col, Typography, Space, message, Divider,
+  Row, Col, Typography, Space, message, Divider, Modal,
+  Descriptions, Tag,
 } from 'antd'
-import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined } from '@ant-design/icons'
+import {
+  PlusOutlined, DeleteOutlined, ArrowLeftOutlined,
+  SendOutlined, SaveOutlined, ExclamationCircleOutlined,
+} from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { requisitionsApi } from '@/api/requisitions'
 import { departmentsApi } from '@/api/system'
@@ -20,6 +24,8 @@ export default function CreateRequisition() {
   const [materials, setMaterials] = useState<Material[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pendingValues, setPendingValues] = useState<any>(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -33,28 +39,57 @@ export default function CreateRequisition() {
     setItems(items.map(i => i.key === key ? { ...i, [field]: value } : i))
   }
 
-  const handleSubmit = async (values: any) => {
-    const validItems = items.filter(i => i.materialId && i.quantity)
-    if (!validItems.length) {
-      message.error('请至少添加一项申领耗材')
-      return
-    }
+  const getValidItems = () => items.filter(i => i.materialId && i.quantity)
+
+  const buildPayload = (values: any) => ({
+    deptId: values.deptId,
+    requiredDate: values.requiredDate?.format('YYYY-MM-DD'),
+    remark: values.remark,
+    items: getValidItems().map(i => ({
+      materialId: i.materialId!,
+      quantity: i.quantity!,
+      remark: i.remark,
+    })),
+  })
+
+  // 保存草稿（不确认，直接保存 DRAFT）
+  const handleSaveDraft = async () => {
+    const values = await form.validateFields().catch(() => null)
+    if (!values) return
+    if (!getValidItems().length) { message.error('请至少添加一项申领耗材'); return }
     setLoading(true)
     try {
-      await requisitionsApi.create({
-        deptId: values.deptId,
-        requiredDate: values.requiredDate?.format('YYYY-MM-DD'),
-        remark: values.remark,
-        items: validItems.map(i => ({
-          materialId: i.materialId!,
-          quantity: i.quantity!,
-          remark: i.remark,
-        })),
-      })
-      message.success('申领单创建成功')
+      await requisitionsApi.create(buildPayload(values))
+      message.success('草稿已保存')
       navigate('/requisitions')
     } catch {} finally { setLoading(false) }
   }
+
+  // 提交申领：先校验 → 弹确认框
+  const handleSubmitClick = async () => {
+    const values = await form.validateFields().catch(() => null)
+    if (!values) return
+    if (!getValidItems().length) { message.error('请至少添加一项申领耗材'); return }
+    setPendingValues(values)
+    setConfirmOpen(true)
+  }
+
+  // 确认弹框中点"确认提交"
+  const handleConfirmSubmit = async () => {
+    if (!pendingValues) return
+    setLoading(true)
+    setConfirmOpen(false)
+    try {
+      const created = await requisitionsApi.create(buildPayload(pendingValues))
+      await requisitionsApi.submit(created.id)
+      message.success('申领单已提交，等待审批')
+      navigate('/requisitions')
+    } catch {} finally { setLoading(false) }
+  }
+
+  const validItems = getValidItems()
+  const selectedDeptName = departments.find(d => d.id === form.getFieldValue('deptId'))?.deptName
+  const totalQty = validItems.reduce((sum, i) => sum + (i.quantity || 0), 0)
 
   return (
     <div>
@@ -66,7 +101,7 @@ export default function CreateRequisition() {
       </Card>
 
       <Card bordered={false} className="rounded-xl">
-        <Form form={form} onFinish={handleSubmit} layout="vertical">
+        <Form form={form} layout="vertical">
           <Row gutter={24}>
             <Col span={8}>
               <Form.Item name="deptId" label="申领科室" rules={[{ required: true }]}>
@@ -135,19 +170,67 @@ export default function CreateRequisition() {
             ]}
           />
 
-          <Button type="dashed" icon={<PlusOutlined />} onClick={addItem}
-            className="w-full my-4">
+          <Button type="dashed" icon={<PlusOutlined />} onClick={addItem} className="w-full my-4">
             添加耗材
           </Button>
 
           <Row justify="end">
             <Space>
               <Button onClick={() => navigate('/requisitions')}>取消</Button>
-              <Button type="primary" htmlType="submit" loading={loading}>保存草稿</Button>
+              <Button icon={<SaveOutlined />} onClick={handleSaveDraft} loading={loading}>
+                保存草稿
+              </Button>
+              <Button type="primary" icon={<SendOutlined />} onClick={handleSubmitClick} loading={loading}>
+                提交申领
+              </Button>
             </Space>
           </Row>
         </Form>
       </Card>
+
+      {/* 提交确认弹框 */}
+      <Modal
+        title={
+          <Space>
+            <ExclamationCircleOutlined style={{ color: '#faad14' }} />
+            确认提交申领单？
+          </Space>
+        }
+        open={confirmOpen}
+        onCancel={() => setConfirmOpen(false)}
+        onOk={handleConfirmSubmit}
+        okText="确认提交"
+        cancelText="取消"
+        okButtonProps={{ type: 'primary', icon: <SendOutlined /> }}
+        confirmLoading={loading}
+      >
+        <p style={{ color: '#888', marginBottom: 16 }}>
+          提交后将进入审批流程，提交前请确认明细无误。
+        </p>
+        <Descriptions bordered size="small" column={1}>
+          <Descriptions.Item label="申领科室">
+            {selectedDeptName || '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="耗材品种">
+            {validItems.length} 种
+          </Descriptions.Item>
+          <Descriptions.Item label="申领总量">
+            {totalQty} 件
+          </Descriptions.Item>
+          <Descriptions.Item label="耗材明细">
+            <Space wrap size={4}>
+              {validItems.map(i => {
+                const mat = materials.find(m => m.id === i.materialId)
+                return mat ? (
+                  <Tag key={i.key} color="blue">
+                    {mat.materialName} × {i.quantity}
+                  </Tag>
+                ) : null
+              })}
+            </Space>
+          </Descriptions.Item>
+        </Descriptions>
+      </Modal>
     </div>
   )
 }

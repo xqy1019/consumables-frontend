@@ -72,6 +72,8 @@ export interface Supplier {
   phone: string
   email: string
   address: string
+  licenseNo: string
+  licenseExpiry: string
   status: number
   createTime: string
 }
@@ -92,6 +94,10 @@ export interface Material {
   leadTime: number
   currentStock: number
   description: string
+  registrationNo: string
+  registrationExpiry: string
+  manufacturer: string
+  isHighValue: boolean
   status: number
   createTime: string
 }
@@ -112,6 +118,8 @@ export interface Inventory {
   supplierId: number
   supplierName: string
   receiveDate: string
+  inspectionStatus: string
+  inspectionRemark: string
   status: number
   expiring: boolean
   lowStock: boolean
@@ -205,6 +213,7 @@ export const REQUISITION_STATUS: Record<string, { label: string; color: string }
   APPROVED: { label: '已审批', color: 'success' },
   REJECTED: { label: '已驳回', color: 'error' },
   DISPATCHED: { label: '已发放', color: 'cyan' },
+  SIGNED: { label: '已签收', color: 'green' },
 }
 
 // 耗材分类选项

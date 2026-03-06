@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import {
   Table, Button, Space, Input, Select, Tag, Modal, Form,
-  InputNumber, message, Popconfirm, Card, Row, Col,
+  InputNumber, message, Popconfirm, Card, Row, Col, DatePicker, Switch, Tooltip,
 } from 'antd'
-import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
+import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined, WarningOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import dayjs from 'dayjs'
 import { materialsApi } from '@/api/materials'
 import { suppliersApi } from '@/api/system'
 import type { Material, Supplier } from '@/types'
@@ -26,9 +27,7 @@ export default function MaterialsPage() {
       const res = await materialsApi.getList(params)
       setData(res.records)
       setTotal(res.total)
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
   useEffect(() => { fetchData() }, [params])
@@ -36,30 +35,46 @@ export default function MaterialsPage() {
 
   const handleSubmit = async (values: any) => {
     try {
+      const payload = {
+        ...values,
+        registrationExpiry: values.registrationExpiry?.format('YYYY-MM-DD'),
+      }
       if (editRecord) {
-        await materialsApi.update(editRecord.id, values)
+        await materialsApi.update(editRecord.id, payload)
         message.success('更新成功')
       } else {
-        await materialsApi.create(values)
+        await materialsApi.create(payload)
         message.success('创建成功')
       }
-      setModalOpen(false)
-      form.resetFields()
-      setEditRecord(null)
-      fetchData()
+      setModalOpen(false); form.resetFields(); setEditRecord(null); fetchData()
     } catch {}
   }
 
   const handleEdit = (record: Material) => {
     setEditRecord(record)
-    form.setFieldsValue(record)
+    form.setFieldsValue({
+      ...record,
+      registrationExpiry: record.registrationExpiry ? dayjs(record.registrationExpiry) : null,
+    })
     setModalOpen(true)
   }
 
-  const handleDelete = async (id: number) => {
-    await materialsApi.delete(id)
-    message.success('删除成功')
-    fetchData()
+  const getCertTag = (record: Material) => {
+    if (!record.registrationNo) return <Tag color="default">未填写</Tag>
+    if (!record.registrationExpiry) return <Tag color="blue">{record.registrationNo}</Tag>
+    const expiry = dayjs(record.registrationExpiry)
+    const now = dayjs()
+    if (expiry.isBefore(now)) return (
+      <Tooltip title={`注册证 ${record.registrationNo} 已于 ${record.registrationExpiry} 过期`}>
+        <Tag color="red" icon={<WarningOutlined />}>{record.registrationNo} 已过期</Tag>
+      </Tooltip>
+    )
+    if (expiry.diff(now, 'day') <= 60) return (
+      <Tooltip title={`注册证 ${record.registrationNo} 将于 ${record.registrationExpiry} 到期`}>
+        <Tag color="orange" icon={<WarningOutlined />}>{record.registrationNo} 即将到期</Tag>
+      </Tooltip>
+    )
+    return <Tag color="green">{record.registrationNo}</Tag>
   }
 
   const columns: ColumnsType<Material> = [
@@ -69,6 +84,8 @@ export default function MaterialsPage() {
       render: (v) => v ? <Tag color="blue">{v}</Tag> : '-' },
     { title: '规格', dataIndex: 'specification', width: 120 },
     { title: '单位', dataIndex: 'unit', width: 70 },
+    { title: '生产厂家', dataIndex: 'manufacturer', width: 150, ellipsis: true },
+    { title: '注册证号', width: 200, render: (_, r) => getCertTag(r) },
     { title: '供应商', dataIndex: 'supplierName', width: 140 },
     { title: '标准价格', dataIndex: 'standardPrice', width: 100,
       render: (v) => v != null ? `¥${v.toFixed(2)}` : '-' },
@@ -76,7 +93,8 @@ export default function MaterialsPage() {
       render: (v, record) => (
         <Tag color={v < (record.minStock || 0) ? 'red' : 'green'}>{v}</Tag>
       ) },
-    { title: '最低库存', dataIndex: 'minStock', width: 90 },
+    { title: '高值耗材', dataIndex: 'isHighValue', width: 90,
+      render: (v) => v ? <Tag color="purple">高值</Tag> : '-' },
     { title: '状态', dataIndex: 'status', width: 80,
       render: (v) => <Tag color={v === 1 ? 'success' : 'default'}>{v === 1 ? '启用' : '禁用'}</Tag> },
     {
@@ -84,7 +102,8 @@ export default function MaterialsPage() {
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)}>
+          <Popconfirm title="确认删除？" onConfirm={() =>
+            materialsApi.delete(record.id).then(() => { message.success('删除成功'); fetchData() })}>
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
@@ -121,7 +140,7 @@ export default function MaterialsPage() {
           columns={columns}
           dataSource={data}
           loading={loading}
-          scroll={{ x: 1200 }}
+          scroll={{ x: 1400 }}
           pagination={{
             total, current: params.page, pageSize: params.size,
             showSizeChanger: true, showTotal: (t) => `共 ${t} 条`,
@@ -133,7 +152,7 @@ export default function MaterialsPage() {
       <Modal
         title={editRecord ? '编辑耗材' : '新增耗材'}
         open={modalOpen} onCancel={() => { setModalOpen(false); setEditRecord(null); form.resetFields() }}
-        onOk={() => form.submit()} width={640} destroyOnClose
+        onOk={() => form.submit()} width={720} destroyOnClose
       >
         <Form form={form} onFinish={handleSubmit} layout="vertical" className="pt-2">
           <Row gutter={16}>
@@ -176,6 +195,34 @@ export default function MaterialsPage() {
                 </Select>
               </Form.Item>
             </Col>
+
+            {/* 注册证信息 */}
+            <Col span={24}>
+              <div style={{ fontWeight: 600, color: '#1677ff', marginBottom: 8, marginTop: 4 }}>
+                医疗器械注册证信息
+              </div>
+            </Col>
+            <Col span={10}>
+              <Form.Item name="registrationNo" label="注册证号">
+                <Input placeholder="如：国械注准20XXXXXXXX" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="registrationExpiry" label="注册证到期日">
+                <DatePicker className="w-full" />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item name="isHighValue" label="高值耗材" valuePropName="checked" initialValue={false}>
+                <Switch checkedChildren="是" unCheckedChildren="否" />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item name="manufacturer" label="生产厂家">
+                <Input placeholder="填写实际生产厂家名称（可与供应商不同）" />
+              </Form.Item>
+            </Col>
+
             <Col span={8}>
               <Form.Item name="minStock" label="最低库存" initialValue={0}>
                 <InputNumber min={0} className="w-full" />

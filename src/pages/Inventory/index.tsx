@@ -98,6 +98,14 @@ export default function InventoryPage() {
     { title: '供应商', dataIndex: 'supplierName', width: 140, ellipsis: true },
     { title: '入库日期', dataIndex: 'receiveDate', width: 110 },
     {
+      title: '验收状态', dataIndex: 'inspectionStatus', width: 100,
+      render: (v) => {
+        if (!v || v === 'PASSED') return <Tag color="green">验收合格</Tag>
+        if (v === 'PENDING') return <Tag color="orange">待验收</Tag>
+        return <Tag color="red">验收不合格</Tag>
+      },
+    },
+    {
       title: '状态', dataIndex: 'status', width: 80,
       render: (v) => <Tag color={v === 1 ? 'success' : 'default'}>{v === 1 ? '在库' : '已出库'}</Tag>,
     },
@@ -247,6 +255,20 @@ export default function InventoryPage() {
             <Col span={12}>
               <Form.Item name="expiryDate" label="有效期">
                 <DatePicker className="w-full" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="inspectionStatus" label="验收结果" initialValue="PASSED">
+                <Select>
+                  <Select.Option value="PASSED">验收合格</Select.Option>
+                  <Select.Option value="PENDING">待验收</Select.Option>
+                  <Select.Option value="REJECTED">验收不合格</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="inspectionRemark" label="验收备注">
+                <Input placeholder="填写验收情况说明" />
               </Form.Item>
             </Col>
           </Row>

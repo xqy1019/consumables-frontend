@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Table, Form, Input, Select, Button, DatePicker, Tag, Space } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { getOperationLogs } from '@/api/system'
+import { formatDateTime } from '@/utils/format'
 
 const { RangePicker } = DatePicker
 const { Option } = Select
@@ -51,7 +52,7 @@ const OperationLogPage: React.FC = () => {
   useEffect(() => { fetchData() }, [])
 
   const columns: ColumnsType<OperationLogItem> = [
-    { title: '操作时间', dataIndex: 'operateTime', width: 180 },
+    { title: '操作时间', dataIndex: 'operateTime', width: 180, render: (v) => formatDateTime(v) },
     { title: '操作人', dataIndex: 'username', width: 100 },
     { title: '科室', dataIndex: 'deptName', width: 120 },
     { title: '模块', dataIndex: 'module', width: 100 },

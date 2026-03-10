@@ -11,6 +11,7 @@ import {
 import type { ColumnsType } from 'antd/es/table'
 import { aiApi } from '@/api/ai'
 import type { WarningVO, ExpiryDisposalVO, AnomalyVO } from '@/types'
+import { formatDate } from '@/utils/format'
 
 const LEVEL_MAP: Record<string, { label: string; color: string }> = {
   HIGH:   { label: '高危', color: 'error' },
@@ -240,6 +241,7 @@ export default function WarningsPage() {
     },
     {
       title: '到期时间', dataIndex: 'expiryDate', width: 110,
+      render: (v) => formatDate(v),
     },
     {
       title: '剩余天数', dataIndex: 'daysLeft', width: 90,
@@ -271,7 +273,7 @@ export default function WarningsPage() {
     },
     { title: '科室', dataIndex: 'deptName', width: 110 },
     { title: '耗材名称', dataIndex: 'materialName', width: 150, ellipsis: true },
-    { title: '异常日期', dataIndex: 'anomalyDate', width: 110 },
+    { title: '异常日期', dataIndex: 'anomalyDate', width: 110, render: (v) => formatDate(v) },
     {
       title: '当日消耗', dataIndex: 'anomalyQuantity', width: 90,
       render: v => <span style={{ fontWeight: 600, color: '#ef4444' }}>{v}</span>,

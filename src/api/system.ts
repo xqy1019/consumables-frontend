@@ -1,5 +1,5 @@
 import request from './request'
-import type { User, Role, Department, Supplier, PageResult, DashboardData, Permission } from '@/types'
+import type { User, Role, Department, Supplier, PageResult, Permission } from '@/types'
 
 // 用户
 export const usersApi = {
@@ -48,11 +48,6 @@ export const suppliersApi = {
   update: (id: number, data: Partial<Supplier>) =>
     request.put<unknown, Supplier>(`/suppliers/${id}`, data),
   delete: (id: number) => request.delete<unknown, void>(`/suppliers/${id}`),
-}
-
-// 报表
-export const reportsApi = {
-  getDashboard: () => request.get<unknown, DashboardData>('/reports/dashboard'),
 }
 
 // 操作日志

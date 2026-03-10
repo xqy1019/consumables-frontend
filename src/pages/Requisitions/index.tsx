@@ -11,6 +11,7 @@ import type { RootState } from '@/store'
 import { requisitionsApi } from '@/api/requisitions'
 import type { Requisition } from '@/types'
 import { REQUISITION_STATUS } from '@/types'
+import { formatDateTime, formatDate } from '@/utils/format'
 
 // 耗材明细摘要：前 2 种 + 超出显示 +N
 function MaterialSummary({ items }: { items?: Requisition['items'] }) {
@@ -135,8 +136,8 @@ export default function RequisitionsPage() {
       render: (_, r) => <MaterialSummary items={r.items} />,
     },
     { title: '申领时间', dataIndex: 'requisitionDate', width: 145,
-      render: (v) => v ? v.replace('T', ' ').slice(0, 16) : '-' },
-    { title: '需求日期', dataIndex: 'requiredDate', width: 100 },
+      render: (v) => formatDateTime(v) },
+    { title: '需求日期', dataIndex: 'requiredDate', width: 100, render: (v) => formatDate(v) },
     {
       title: '状态', dataIndex: 'status', width: 90,
       render: (v) => {

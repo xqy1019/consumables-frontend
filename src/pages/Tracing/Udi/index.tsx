@@ -9,6 +9,7 @@ import { tracingApi } from '@/api/tracing'
 import { materialsApi } from '@/api/materials'
 import { suppliersApi } from '@/api/system'
 import type { UdiVO, Material, Supplier } from '@/types'
+import { formatDateTime, formatDate } from '@/utils/format'
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   IN_STOCK: { label: '在库', color: 'success' },
@@ -79,13 +80,13 @@ export default function UdiPage() {
     { title: '规格', dataIndex: 'specification', width: 120 },
     { title: '批号', dataIndex: 'batchNumber', width: 130 },
     { title: '供应商', dataIndex: 'supplierName', width: 140, ellipsis: true },
-    { title: '生产日期', dataIndex: 'manufactureDate', width: 110 },
-    { title: '有效期', dataIndex: 'expiryDate', width: 110 },
+    { title: '生产日期', dataIndex: 'manufactureDate', width: 110, render: (v) => formatDate(v) },
+    { title: '有效期', dataIndex: 'expiryDate', width: 110, render: (v) => formatDate(v) },
     {
       title: '状态', dataIndex: 'status', width: 90,
       render: v => <Tag color={STATUS_MAP[v]?.color}>{STATUS_MAP[v]?.label || v}</Tag>,
     },
-    { title: '注册时间', dataIndex: 'createTime', width: 160 },
+    { title: '注册时间', dataIndex: 'createTime', width: 160, render: (v) => formatDateTime(v) },
   ]
 
   return (

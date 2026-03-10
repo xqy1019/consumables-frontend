@@ -7,6 +7,7 @@ import { SearchOutlined, UserOutlined, MedicineBoxOutlined, QrcodeOutlined, Chec
 import type { ColumnsType } from 'antd/es/table'
 import { tracingApi } from '@/api/tracing'
 import type { TraceResult, SurgeryVO, BindingVO } from '@/types'
+import { formatDateTime } from '@/utils/format'
 
 
 const TRACE_OPTIONS = [
@@ -68,7 +69,7 @@ export default function PatientTracePage() {
     { title: '手术单号', dataIndex: 'surgeryNo', width: 180 },
     { title: '患者', dataIndex: 'patientName', width: 100 },
     { title: '手术类型', dataIndex: 'surgeryType', width: 120 },
-    { title: '手术日期', dataIndex: 'surgeryDate', width: 110 },
+    { title: '手术日期', dataIndex: 'surgeryDate', width: 110, render: (v) => formatDateTime(v) },
     { title: '科室', dataIndex: 'deptName', width: 120 },
     { title: '主治医生', dataIndex: 'operatingDoctor', width: 110 },
     {
@@ -82,7 +83,7 @@ export default function PatientTracePage() {
     { title: '耗材名称', dataIndex: 'materialName', width: 150 },
     { title: '规格', dataIndex: 'specification', width: 120 },
     { title: '数量', dataIndex: 'quantity', width: 80 },
-    { title: '绑定时间', dataIndex: 'bindTime', width: 160 },
+    { title: '绑定时间', dataIndex: 'bindTime', width: 160, render: (v) => formatDateTime(v) },
   ]
 
   const currentOption = TRACE_OPTIONS.find(o => o.key === traceType)!

@@ -9,6 +9,7 @@ import { inventoryExtApi } from '@/api/inventoryExt'
 import { inventoryApi } from '@/api/inventory'
 import { departmentsApi } from '@/api/system'
 import type { BorrowingVO, Inventory, Department } from '@/types'
+import { formatDateTime, formatDate } from '@/utils/format'
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   BORROWED: { label: '借用中', color: 'processing' },
@@ -82,9 +83,9 @@ export default function BorrowingPage() {
     { title: '数量', dataIndex: 'quantity', width: 80 },
     { title: '借用科室', dataIndex: 'deptName', width: 120 },
     { title: '借用人', dataIndex: 'borrowerName', width: 100 },
-    { title: '借用日期', dataIndex: 'borrowingDate', width: 160 },
-    { title: '预计归还', dataIndex: 'expectedReturnDate', width: 110 },
-    { title: '实际归还', dataIndex: 'actualReturnDate', width: 110, render: v => v || '-' },
+    { title: '借用日期', dataIndex: 'borrowingDate', width: 160, render: (v) => formatDateTime(v) },
+    { title: '预计归还', dataIndex: 'expectedReturnDate', width: 110, render: (v) => formatDate(v) },
+    { title: '实际归还', dataIndex: 'actualReturnDate', width: 110, render: v => v ? formatDate(v) : '-' },
     {
       title: '状态', dataIndex: 'status', width: 100,
       render: v => <Tag color={STATUS_MAP[v]?.color}>{STATUS_MAP[v]?.label || v}</Tag>,

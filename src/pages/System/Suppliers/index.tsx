@@ -8,6 +8,7 @@ import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { suppliersApi } from '@/api/system'
 import type { Supplier } from '@/types'
+import { formatDate } from '@/utils/format'
 
 export default function SuppliersPage() {
   const [data, setData] = useState<Supplier[]>([])
@@ -80,7 +81,7 @@ export default function SuppliersPage() {
     { title: '联系人', dataIndex: 'contactPerson', width: 100 },
     { title: '联系电话', dataIndex: 'phone', width: 130 },
     { title: '经营许可证', width: 200, render: (_, r) => getLicenseTag(r) },
-    { title: '许可证到期日', dataIndex: 'licenseExpiry', width: 130 },
+    { title: '许可证到期日', dataIndex: 'licenseExpiry', width: 130, render: (v) => formatDate(v) },
     { title: '邮箱', dataIndex: 'email', width: 160, ellipsis: true },
     { title: '地址', dataIndex: 'address', ellipsis: true },
     { title: '状态', dataIndex: 'status', width: 80,

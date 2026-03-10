@@ -1,7 +1,10 @@
 import request from './request'
-import type { ConsumptionTrend, DeptRanking, CostAnalysis, BiDashboard } from '@/types'
+import type { ConsumptionTrend, DeptRanking, CostAnalysis, BiDashboard, DashboardData } from '@/types'
 
 export const reportsApi = {
+  getDashboard: () =>
+    request.get<unknown, DashboardData>('/reports/dashboard'),
+
   getConsumptionTrend: (months?: number) =>
     request.get<unknown, ConsumptionTrend[]>('/reports/consumption-trend', { params: { months } }),
 

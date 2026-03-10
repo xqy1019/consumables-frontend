@@ -267,6 +267,11 @@ const ALL_MENU_ITEMS = [
     ],
   },
   {
+    key: "/notifications",
+    icon: <NotificationOutlined />,
+    label: "通知中心",
+  },
+  {
     key: "/docs",
     icon: <FileTextOutlined />,
     label: "项目文档",
@@ -296,11 +301,6 @@ const ALL_MENU_ITEMS = [
         permission: "menu:system:log",
       },
     ],
-  },
-  {
-    key: "/notifications",
-    icon: <NotificationOutlined />,
-    label: "通知中心",
   },
 ];
 
@@ -349,7 +349,7 @@ export default function MainLayout() {
 
   const unreadCount = useMemo(
     () => notifications.filter((n) => !readIds.includes(n.id)).length,
-    [notifications, readIds]
+    [notifications, readIds],
   );
 
   const filteredNotifications = useMemo(() => {
@@ -592,7 +592,12 @@ export default function MainLayout() {
                       {unreadCount > 0 ? `${unreadCount} 条未读` : "全部已读"}
                     </span>
                     {unreadCount > 0 && (
-                      <Button type="link" size="small" onClick={markAllRead} style={{ fontSize: 12, padding: 0 }}>
+                      <Button
+                        type="link"
+                        size="small"
+                        onClick={markAllRead}
+                        style={{ fontSize: 12, padding: 0 }}
+                      >
                         全部标为已读
                       </Button>
                     )}
@@ -607,9 +612,18 @@ export default function MainLayout() {
                     size="small"
                     items={[
                       { key: "all", label: `全部 (${notifications.length})` },
-                      { key: "error", label: `错误 (${notifications.filter(n => n.level === "error").length})` },
-                      { key: "warning", label: `警告 (${notifications.filter(n => n.level === "warning").length})` },
-                      { key: "info", label: `信息 (${notifications.filter(n => n.level === "info").length})` },
+                      {
+                        key: "error",
+                        label: `错误 (${notifications.filter((n) => n.level === "error").length})`,
+                      },
+                      {
+                        key: "warning",
+                        label: `警告 (${notifications.filter((n) => n.level === "warning").length})`,
+                      },
+                      {
+                        key: "info",
+                        label: `信息 (${notifications.filter((n) => n.level === "info").length})`,
+                      },
                     ]}
                   />
                   <div style={{ maxHeight: 350, overflowY: "auto" }}>
@@ -641,8 +655,21 @@ export default function MainLayout() {
                                   }
                                 }}
                               >
-                                <div style={{ width: "100%", display: "flex", gap: 8, alignItems: "flex-start" }}>
-                                  <span style={{ fontSize: 16, flexShrink: 0, marginTop: 2 }}>
+                                <div
+                                  style={{
+                                    width: "100%",
+                                    display: "flex",
+                                    gap: 8,
+                                    alignItems: "flex-start",
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      fontSize: 16,
+                                      flexShrink: 0,
+                                      marginTop: 2,
+                                    }}
+                                  >
                                     {LEVEL_ICON[item.level]}
                                   </span>
                                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -653,7 +680,12 @@ export default function MainLayout() {
                                         marginBottom: 2,
                                       }}
                                     >
-                                      <span style={{ fontWeight: isRead ? 400 : 500, fontSize: 13 }}>
+                                      <span
+                                        style={{
+                                          fontWeight: isRead ? 400 : 500,
+                                          fontSize: 13,
+                                        }}
+                                      >
                                         {item.title}
                                       </span>
                                       <Tag
@@ -680,7 +712,14 @@ export default function MainLayout() {
                       )}
                     </Spin>
                   </div>
-                  <div style={{ textAlign: "center", borderTop: `1px solid ${token.colorBorderSecondary}`, paddingTop: 8, marginTop: 4 }}>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      borderTop: `1px solid ${token.colorBorderSecondary}`,
+                      paddingTop: 8,
+                      marginTop: 4,
+                    }}
+                  >
                     <Button
                       type="link"
                       size="small"

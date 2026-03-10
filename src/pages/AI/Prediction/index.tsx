@@ -9,6 +9,7 @@ import type { ColumnsType } from 'antd/es/table'
 import styled from 'styled-components'
 import { aiApi } from '@/api/ai'
 import type { PredictionVO, SafetyStockVO } from '@/types'
+import { formatDateTime } from '@/utils/format'
 
 const ColorValue = styled.span<{ color: string }>`
   font-weight: 600;
@@ -202,7 +203,7 @@ export default function PredictionPage() {
         ? <Tag color="purple" style={{ borderRadius: 8, fontSize: 11 }}>Claude AI</Tag>
         : <Tag color="default" style={{ borderRadius: 8, fontSize: 11 }}>{v || 'MA3'}</Tag>,
     },
-    { title: '生成时间', dataIndex: 'createTime', width: 160 },
+    { title: '生成时间', dataIndex: 'createTime', width: 160, render: (v) => formatDateTime(v) },
   ]
 
   const safetyColumns: ColumnsType<SafetyStockVO> = [

@@ -11,6 +11,7 @@ import { departmentsApi } from '@/api/system'
 import type { Material, Department } from '@/types'
 import { useSelector } from 'react-redux'
 import type { RootState } from '@/store'
+import { formatDateTime } from '@/utils/format'
 
 const STATUS_COLOR: Record<string, string> = {
   PENDING: 'gold', APPROVED: 'blue', COMPLETED: 'green', REJECTED: 'red',
@@ -91,7 +92,7 @@ export default function ReturnPage() {
     { title: '申请科室', dataIndex: 'deptName', width: 130 },
     { title: '申请人', dataIndex: 'createdByName', width: 100 },
     { title: '申请时间', dataIndex: 'createTime', width: 160,
-      render: (v) => v?.replace('T', ' ').slice(0, 16) },
+      render: (v) => formatDateTime(v) },
     {
       title: '退料耗材', width: 260,
       render: (_, r) => {
@@ -253,7 +254,7 @@ export default function ReturnPage() {
               <Descriptions.Item label="申请人">{detail.createdByName}</Descriptions.Item>
               <Descriptions.Item label="审批人">{detail.approvedByName || '-'}</Descriptions.Item>
               <Descriptions.Item label="审批时间">
-                {detail.approvedTime?.replace('T', ' ').slice(0, 16) || '-'}
+                {formatDateTime(detail.approvedTime) || '-'}
               </Descriptions.Item>
               <Descriptions.Item label="备注" span={2}>{detail.remark || '-'}</Descriptions.Item>
             </Descriptions>

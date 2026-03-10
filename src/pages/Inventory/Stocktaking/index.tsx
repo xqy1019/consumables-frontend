@@ -7,6 +7,7 @@ import { PlusOutlined, EyeOutlined, CheckOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { inventoryExtApi } from '@/api/inventoryExt'
 import type { StocktakingVO } from '@/types'
+import { formatDateTime } from '@/utils/format'
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   IN_PROGRESS: { label: '盘点中', color: 'processing' },
@@ -81,7 +82,7 @@ export default function StocktakingPage() {
     },
     { title: '操作人', dataIndex: 'createdByName', width: 100 },
     { title: '备注', dataIndex: 'remark', ellipsis: true },
-    { title: '时间', dataIndex: 'createTime', width: 160 },
+    { title: '时间', dataIndex: 'createTime', width: 160, render: (v) => formatDateTime(v) },
     {
       title: '操作', width: 160, fixed: 'right',
       render: (_, record) => (

@@ -8,6 +8,7 @@ import type { ColumnsType } from 'antd/es/table'
 import { rolesApi } from '@/api/system'
 import type { Role, Permission } from '@/types'
 import { usePermission } from '@/hooks/usePermission'
+import { formatDateTime } from '@/utils/format'
 
 const { Text } = Typography
 
@@ -110,7 +111,7 @@ export default function RolesPage() {
       title: '状态', dataIndex: 'status', width: 80,
       render: (v) => <Tag color={v === 1 ? 'success' : 'default'}>{v === 1 ? '启用' : '禁用'}</Tag>
     },
-    { title: '创建时间', dataIndex: 'createTime', width: 160, render: (v) => v?.slice(0, 16) },
+    { title: '创建时间', dataIndex: 'createTime', width: 160, render: (v) => formatDateTime(v) },
     {
       title: '操作', width: 140,
       render: (_, record) => (

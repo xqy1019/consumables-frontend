@@ -8,6 +8,7 @@ import { purchaseApi } from '@/api/purchase'
 import { materialsApi } from '@/api/materials'
 import { suppliersApi } from '@/api/system'
 import type { ContractVO, ContractItemVO, AutoSuggestionVO, Material, Supplier } from '@/types'
+import { formatDate } from '@/utils/format'
 
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -85,8 +86,8 @@ export default function ContractPage() {
   const columns: ColumnsType<ContractVO> = [
     { title: '合同编号', dataIndex: 'contractNo', width: 180 },
     { title: '供应商', dataIndex: 'supplierName', width: 150 },
-    { title: '合同日期', dataIndex: 'contractDate', width: 110 },
-    { title: '交货日期', dataIndex: 'deliveryDate', width: 110 },
+    { title: '合同日期', dataIndex: 'contractDate', width: 110, render: (v) => formatDate(v) },
+    { title: '交货日期', dataIndex: 'deliveryDate', width: 110, render: (v) => formatDate(v) },
     { title: '总金额', dataIndex: 'totalAmount', width: 110, render: v => `¥${(v || 0).toLocaleString()}` },
     {
       title: '状态', dataIndex: 'status', width: 100,

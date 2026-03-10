@@ -6,6 +6,7 @@ import {
 import type { ColumnsType } from 'antd/es/table'
 import { useNavigate } from 'react-router-dom'
 import { notificationsApi, type NotificationVO } from '@/api/notifications'
+import { formatDateTime } from '@/utils/format'
 
 const STORAGE_KEY = 'read_notification_ids'
 
@@ -79,7 +80,7 @@ const NotificationsPage: React.FC = () => {
     },
     { title: '标题', dataIndex: 'title', width: 200 },
     { title: '内容', dataIndex: 'content', ellipsis: true },
-    { title: '时间', dataIndex: 'createTime', width: 180 },
+    { title: '时间', dataIndex: 'createTime', width: 180, render: (v) => formatDateTime(v) },
     {
       title: '状态', width: 80,
       render: (_, record) => readIds.includes(record.id)

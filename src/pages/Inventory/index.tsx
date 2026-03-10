@@ -10,6 +10,7 @@ import { inventoryApi } from '@/api/inventory'
 import { materialsApi } from '@/api/materials'
 import { suppliersApi, departmentsApi } from '@/api/system'
 import type { Inventory, Material, Supplier, Department } from '@/types'
+import { formatDate } from '@/utils/format'
 
 export default function InventoryPage() {
   const [data, setData] = useState<Inventory[]>([])
@@ -93,10 +94,10 @@ export default function InventoryPage() {
     { title: '库位', dataIndex: 'location', width: 100 },
     {
       title: '有效期', dataIndex: 'expiryDate', width: 120,
-      render: (v, r) => v ? <Tag color={r.expiring ? 'red' : 'default'}>{v}</Tag> : '-',
+      render: (v, r) => v ? <Tag color={r.expiring ? 'red' : 'default'}>{formatDate(v)}</Tag> : '-',
     },
     { title: '供应商', dataIndex: 'supplierName', width: 140, ellipsis: true },
-    { title: '入库日期', dataIndex: 'receiveDate', width: 110 },
+    { title: '入库日期', dataIndex: 'receiveDate', width: 110, render: (v) => formatDate(v) },
     {
       title: '验收状态', dataIndex: 'inspectionStatus', width: 100,
       render: (v) => {
@@ -126,7 +127,7 @@ export default function InventoryPage() {
     { title: '数量', dataIndex: 'quantity', width: 80 },
     {
       title: '有效期', dataIndex: 'expiryDate', width: 120,
-      render: (v, r) => v ? <Tag color={r.expiring ? 'red' : 'orange'}>{v}</Tag> : '-',
+      render: (v, r) => v ? <Tag color={r.expiring ? 'red' : 'orange'}>{formatDate(v)}</Tag> : '-',
     },
     {
       title: '预警类型', width: 120,

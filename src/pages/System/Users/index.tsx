@@ -7,6 +7,7 @@ import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from '@ant
 import type { ColumnsType } from 'antd/es/table'
 import { usersApi, rolesApi, departmentsApi } from '@/api/system'
 import type { User, Role, Department } from '@/types'
+import { formatDateTime } from '@/utils/format'
 
 export default function UsersPage() {
   const [data, setData] = useState<User[]>([])
@@ -78,7 +79,7 @@ export default function UsersPage() {
           onChange={(checked) => handleStatusChange(record.id, checked)} />
       ) },
     { title: '创建时间', dataIndex: 'createTime', width: 160,
-      render: (v) => v?.slice(0, 16) },
+      render: (v) => formatDateTime(v) },
     { title: '操作', width: 100, fixed: 'right',
       render: (_, record) => (
         <Space>

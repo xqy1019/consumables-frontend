@@ -13,6 +13,7 @@ import { recallApi, type RecallVO, type RecallDetailVO } from '@/api/recall'
 import { materialsApi } from '@/api/materials'
 import { inventoryApi } from '@/api/inventory'
 import type { Material } from '@/types'
+import { formatDate, formatDateTime } from '@/utils/format'
 
 const LEVEL_COLOR: Record<string, string> = { I: 'red', II: 'orange', III: 'gold' }
 const LEVEL_LABEL: Record<string, string> = { I: 'I级（最严重）', II: 'II级（中等）', III: 'III级（轻微）' }
@@ -100,7 +101,7 @@ export default function RecallPage() {
       title: '来源', dataIndex: 'source', width: 120,
       render: (v) => <Tag>{v === 'SUPPLIER' ? '供应商主动' : '监管部门'}</Tag>,
     },
-    { title: '发布日期', dataIndex: 'issuedDate', width: 110 },
+    { title: '发布日期', dataIndex: 'issuedDate', width: 110, render: (v) => formatDate(v) },
     { title: '涉及批次数', dataIndex: 'batchCount', width: 100 },
     {
       title: '状态', dataIndex: 'status', width: 100,
@@ -295,7 +296,7 @@ export default function RecallPage() {
                 { title: '批号', dataIndex: 'batchNumber', width: 130 },
                 { title: '当前库存', dataIndex: 'quantity', width: 90 },
                 { title: '库位', dataIndex: 'location', width: 100 },
-                { title: '效期', dataIndex: 'expiryDate', width: 110 },
+                { title: '效期', dataIndex: 'expiryDate', width: 110, render: (v) => formatDate(v) },
               ]}
             />
 
@@ -316,7 +317,7 @@ export default function RecallPage() {
                   </Tag>,
                 },
                 { title: '处置时间', dataIndex: 'disposalDate', width: 160,
-                  render: (v) => v?.replace('T', ' ').slice(0, 16) },
+                  render: (v) => formatDateTime(v) },
                 { title: '操作人', dataIndex: 'operatorName', width: 90 },
                 { title: '备注', dataIndex: 'remark', ellipsis: true },
               ]}

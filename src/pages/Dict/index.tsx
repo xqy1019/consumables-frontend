@@ -7,6 +7,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, UnorderedListOutlined } fro
 import type { ColumnsType } from 'antd/es/table'
 import { dictApi } from '@/api/dict'
 import type { DictType, DictItem } from '@/types'
+import { formatDateTime } from '@/utils/format'
 
 export default function DictPage() {
   const [types, setTypes] = useState<DictType[]>([])
@@ -118,7 +119,7 @@ export default function DictPage() {
       title: '状态', dataIndex: 'status', width: 80,
       render: v => <Tag color={v === 1 ? 'success' : 'default'}>{v === 1 ? '启用' : '禁用'}</Tag>,
     },
-    { title: '创建时间', dataIndex: 'createTime', width: 160, render: v => v?.replace('T', ' ')?.slice(0, 16) },
+    { title: '创建时间', dataIndex: 'createTime', width: 160, render: (v) => formatDateTime(v) },
     {
       title: '操作', width: 200, fixed: 'right',
       render: (_, record) => (

@@ -9,6 +9,7 @@ import { tracingApi } from '@/api/tracing'
 import { departmentsApi } from '@/api/system'
 import type { SurgeryVO, BindingVO, Department } from '@/types'
 import { Select } from 'antd'
+import { formatDateTime } from '@/utils/format'
 
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -81,7 +82,7 @@ export default function SurgeryPage() {
     { title: '患者ID', dataIndex: 'patientId', width: 110 },
     { title: '患者姓名', dataIndex: 'patientName', width: 100 },
     { title: '手术类型', dataIndex: 'surgeryType', width: 120 },
-    { title: '手术日期', dataIndex: 'surgeryDate', width: 110 },
+    { title: '手术日期', dataIndex: 'surgeryDate', width: 110, render: (v) => formatDateTime(v) },
     { title: '科室', dataIndex: 'deptName', width: 120 },
     { title: '主治医生', dataIndex: 'operatingDoctor', width: 110 },
     {
@@ -108,7 +109,7 @@ export default function SurgeryPage() {
     { title: '耗材名称', dataIndex: 'materialName', width: 150 },
     { title: '规格', dataIndex: 'specification', width: 120 },
     { title: '数量', dataIndex: 'quantity', width: 80 },
-    { title: '绑定时间', dataIndex: 'bindTime', width: 160 },
+    { title: '绑定时间', dataIndex: 'bindTime', width: 160, render: (v) => formatDateTime(v) },
     { title: '备注', dataIndex: 'remark', ellipsis: true },
   ]
 

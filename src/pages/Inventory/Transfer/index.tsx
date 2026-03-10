@@ -8,6 +8,7 @@ import type { ColumnsType } from 'antd/es/table'
 import { inventoryExtApi } from '@/api/inventoryExt'
 import { inventoryApi } from '@/api/inventory'
 import type { TransferVO, Inventory } from '@/types'
+import { formatDateTime } from '@/utils/format'
 
 export default function TransferPage() {
   const [data, setData] = useState<TransferVO[]>([])
@@ -65,7 +66,7 @@ export default function TransferPage() {
     },
     { title: '操作人', dataIndex: 'operatorName', width: 100 },
     { title: '备注', dataIndex: 'remark', ellipsis: true },
-    { title: '时间', dataIndex: 'createTime', width: 160 },
+    { title: '时间', dataIndex: 'createTime', width: 160, render: (v) => formatDateTime(v) },
   ]
 
   return (

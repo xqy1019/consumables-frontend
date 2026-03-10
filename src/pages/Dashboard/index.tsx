@@ -9,7 +9,7 @@ import {
   ApiOutlined, ClockCircleOutlined,
 } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
-import { reportsApi } from '@/api/system'
+import { reportsApi } from '@/api/reports'
 import { aiApi } from '@/api/ai'
 import type { DashboardData, WarningVO, SafetyStockVO, AiDashboardAnalysis, AiWarningVO, AiSuggestionVO } from '@/types'
 import { useSelector } from 'react-redux'

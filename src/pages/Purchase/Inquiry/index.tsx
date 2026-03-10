@@ -8,6 +8,7 @@ import { purchaseApi } from '@/api/purchase'
 import { materialsApi } from '@/api/materials'
 import { suppliersApi } from '@/api/system'
 import type { InquiryVO, InquiryItemVO, Material, Supplier } from '@/types'
+import { formatDateTime, formatDate } from '@/utils/format'
 
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -76,14 +77,14 @@ export default function InquiryPage() {
   const columns: ColumnsType<InquiryVO> = [
     { title: '询价单号', dataIndex: 'inquiryNo', width: 180 },
     { title: '供应商', dataIndex: 'supplierName', width: 150 },
-    { title: '报价有效期', dataIndex: 'validDate', width: 110 },
+    { title: '报价有效期', dataIndex: 'validDate', width: 110, render: (v) => formatDate(v) },
     { title: '总金额', dataIndex: 'totalAmount', width: 100, render: v => v ? `¥${v.toLocaleString()}` : '-' },
     {
       title: '状态', dataIndex: 'status', width: 100,
       render: v => <Tag color={STATUS_MAP[v]?.color}>{STATUS_MAP[v]?.label || v}</Tag>,
     },
     { title: '备注', dataIndex: 'remark', ellipsis: true },
-    { title: '创建时间', dataIndex: 'createTime', width: 160 },
+    { title: '创建时间', dataIndex: 'createTime', width: 160, render: (v) => formatDateTime(v) },
     {
       title: '操作', width: 140, fixed: 'right',
       render: (_, record) => (

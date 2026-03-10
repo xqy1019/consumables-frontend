@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Card, Radio, Spin, Button, Alert, Space } from 'antd'
-import { RobotOutlined } from '@ant-design/icons'
+import { Card, Radio, Spin, Button, Space } from 'antd'
+import { RobotOutlined, DownloadOutlined } from '@ant-design/icons'
 import * as echarts from 'echarts'
-import { reportsApi } from '@/api/reports'
+import { reportsApi, getExportConsumptionTrendUrl } from '@/api/reports'
 import { aiApi } from '@/api/ai'
 import type { ConsumptionTrend } from '@/types'
+import AiAnalysisPanel from '@/components/AiAnalysisPanel'
 
 
 export default function TrendPage() {
@@ -16,12 +17,32 @@ export default function TrendPage() {
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
 
+  const buildSummary = (d: ConsumptionTrend[], m: number) => {
+    if (d.length === 0) return ''
+    const total = d.reduce((s, x) => s + x.total, 0)
+    const avg = Math.round(total / d.length)
+    const maxItem = d.reduce((a, b) => b.total > a.total ? b : a)
+    const minItem = d.reduce((a, b) => b.total < a.total ? b : a)
+    const last = d[d.length - 1]
+    const prev = d[d.length - 2]
+    const mom = prev
+      ? `${(((last.total - prev.total) / prev.total) * 100).toFixed(1)}%`
+      : '无'
+    const detail = d.map(x => `${x.month}: ${x.total}件`).join('，')
+    return [
+      `统计周期：近${m}个月`,
+      `总消耗量：${total}件，月均：${avg}件`,
+      `峰值月份：${maxItem.month}（${maxItem.total}件），谷值月份：${minItem.month}（${minItem.total}件）`,
+      `最新月环比变化：${mom}`,
+      `月度明细：${detail}`,
+    ].join('\n')
+  }
+
   const handleAiAnalyze = async () => {
     if (data.length === 0) return
     setAiLoading(true)
     try {
-      const summary = data.map(d => `${d.month}: 消耗${d.total}件`).join(', ')
-      const result = await aiApi.analyzeReport('消耗趋势', summary)
+      const result = await aiApi.analyzeReport('消耗趋势', buildSummary(data, months))
       setAiAnalysis(result || '暂时无法获取 AI 解读，请稍后再试。')
     } catch {
       setAiAnalysis('AI 解读请求失败，请检查网络后重试。')
@@ -38,7 +59,10 @@ export default function TrendPage() {
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { fetchData(months) }, [months])
+  useEffect(() => {
+    setAiAnalysis(null)
+    fetchData(months)
+  }, [months])
 
   useEffect(() => {
     if (!chartRef.current || data.length === 0) return
@@ -83,8 +107,18 @@ export default function TrendPage() {
               <Radio.Button value={6}>近6月</Radio.Button>
               <Radio.Button value={12}>近12月</Radio.Button>
             </Radio.Group>
-            <Button icon={<RobotOutlined />} loading={aiLoading} onClick={handleAiAnalyze}
-              style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', border: 'none' }}>
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={() => window.open(getExportConsumptionTrendUrl(months))}
+            >
+              导出 Excel
+            </Button>
+            <Button
+              icon={<RobotOutlined />}
+              loading={aiLoading}
+              onClick={handleAiAnalyze}
+              style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', border: 'none' }}
+            >
               AI 解读
             </Button>
           </Space>
@@ -93,15 +127,16 @@ export default function TrendPage() {
         <Spin spinning={loading}>
           <div ref={chartRef} className="h-[400px]" />
         </Spin>
-        {aiAnalysis && (
-          <Alert
-            type="info" icon={<RobotOutlined />} showIcon
-            style={{ marginTop: 16, borderRadius: 8, background: '#f5f0ff', borderColor: '#c4b5fd' }}
-            message={<span style={{ fontWeight: 600, color: '#7c3aed' }}>Claude AI 解读</span>}
-            description={<div style={{ whiteSpace: 'pre-wrap', color: '#374151', lineHeight: 1.8, marginTop: 4 }}>{aiAnalysis}</div>}
-          />
-        )}
       </Card>
+
+      {aiAnalysis && (
+        <AiAnalysisPanel
+          text={aiAnalysis}
+          refreshing={aiLoading}
+          onRefresh={handleAiAnalyze}
+          onClose={() => setAiAnalysis(null)}
+        />
+      )}
     </div>
   )
 }

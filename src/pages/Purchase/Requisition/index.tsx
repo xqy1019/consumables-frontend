@@ -148,9 +148,9 @@ export default function PurchaseRequisitionPage() {
     { title: '备注', dataIndex: 'remark', ellipsis: true },
     { title: '创建时间', dataIndex: 'createTime', width: 160 },
     {
-      title: '操作', width: 200, fixed: 'right',
+      title: '操作', width: 260, fixed: 'right',
       render: (_, record) => (
-        <Space>
+        <Space size={4} wrap={false}>
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewDetail(record)}>详情</Button>
           {record.status === 'DRAFT' && (
             <Button size="small" type="primary" icon={<SendOutlined />}
@@ -216,7 +216,7 @@ export default function PurchaseRequisitionPage() {
           </Col>
         </Row>
         <Table
-          rowKey="id" columns={columns} dataSource={data} loading={loading} scroll={{ x: 1000 }}
+          rowKey="id" columns={columns} dataSource={data} loading={loading} scroll={{ x: 1100 }}
           pagination={{
             total, current: page.page, pageSize: page.size,
             showSizeChanger: true, showTotal: t => `共 ${t} 条`,

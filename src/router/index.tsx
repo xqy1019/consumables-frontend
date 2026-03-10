@@ -31,6 +31,9 @@ import BIScreenPage from '@/pages/Reports/BIScreen'
 import ForbiddenPage from '@/pages/Forbidden'
 import RecallPage from '@/pages/Recall'
 import ReturnPage from '@/pages/Inventory/Return'
+import DocsPage from '@/pages/Docs'
+import OperationLogPage from '@/pages/System/OperationLog'
+import NotificationsPage from '@/pages/Notifications'
 
 import { useSelector } from 'react-redux'
 import type { RootState } from '@/store'
@@ -162,6 +165,8 @@ export const routes: RouteObject[] = [
         path: 'reports/bi-screen',
         element: <RequirePermission permission="menu:report"><BIScreenPage /></RequirePermission>,
       },
+      // 项目文档（仅管理员可见）
+      { path: 'docs', element: <RequirePermission permission="menu:docs"><DocsPage /></RequirePermission> },
       // 系统管理
       {
         path: 'system/users',
@@ -179,6 +184,13 @@ export const routes: RouteObject[] = [
         path: 'system/suppliers',
         element: <RequirePermission permission="menu:supplier"><SuppliersPage /></RequirePermission>,
       },
+      // 操作日志
+      {
+        path: 'system/operation-logs',
+        element: <RequirePermission permission="menu:system:log"><OperationLogPage /></RequirePermission>,
+      },
+      // 通知中心
+      { path: 'notifications', element: <NotificationsPage /> },
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },

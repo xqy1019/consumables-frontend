@@ -14,3 +14,14 @@ export const reportsApi = {
   getBiDashboard: () =>
     request.get<unknown, BiDashboard>('/reports/bi-dashboard'),
 }
+
+const API_BASE = 'http://localhost:8081'
+
+export const getExportConsumptionTrendUrl = (months = 6) =>
+  `${API_BASE}/api/v1/reports/consumption-trend/export?months=${months}&token=${localStorage.getItem('token') || ''}`
+
+export const getExportDeptRankingUrl = (days = 30) =>
+  `${API_BASE}/api/v1/reports/department-ranking/export?days=${days}&token=${localStorage.getItem('token') || ''}`
+
+export const getExportCostAnalysisUrl = (months = 6) =>
+  `${API_BASE}/api/v1/reports/cost-analysis/export?months=${months}&token=${localStorage.getItem('token') || ''}`

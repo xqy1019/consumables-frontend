@@ -36,6 +36,7 @@ export default function RequisitionsPage() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
+  const [approvedCount, setApprovedCount] = useState(0)
   const [activeTab, setActiveTab] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState('')
   const [page, setPage] = useState(1)
@@ -52,7 +53,8 @@ export default function RequisitionsPage() {
   // 初始化默认 tab
   useEffect(() => {
     if (canApprove) setActiveTab('pending')
-    else if (isNurse || isKeeper) setActiveTab('mine')
+    else if (isKeeper) setActiveTab('approved')  // 库管员默认看「待发放」
+    else if (isNurse) setActiveTab('mine')
     else setActiveTab('all')
   }, [roles])
 
@@ -65,6 +67,15 @@ export default function RequisitionsPage() {
     }
   }, [roles])
 
+  // 获取待发放数量（用于徽标）
+  useEffect(() => {
+    if (isAdmin || isKeeper) {
+      requisitionsApi.getList({ status: 'APPROVED', page: 1, size: 1 })
+        .then(res => setApprovedCount(res.total))
+        .catch(() => {})
+    }
+  }, [roles])
+
   const fetchData = async (tab = activeTab, status = statusFilter, pg = page, sz = pageSize) => {
     if (!tab) return
     setLoading(true)
@@ -72,6 +83,8 @@ export default function RequisitionsPage() {
       const params: any = { page: pg, size: sz }
       if (tab === 'pending') {
         params.status = 'PENDING'
+      } else if (tab === 'approved') {
+        params.status = 'APPROVED'
       } else if (tab === 'mine') {
         if (userId) params.createdBy = userId
         if (status) params.status = status
@@ -81,6 +94,15 @@ export default function RequisitionsPage() {
       const res = await requisitionsApi.getList(params)
       setData(res.records)
       setTotal(res.total)
+      // 刷新徽标计数
+      if (canApprove) {
+        requisitionsApi.getList({ status: 'PENDING', page: 1, size: 1 })
+          .then(r => setPendingCount(r.total)).catch(() => {})
+      }
+      if (isAdmin || isKeeper) {
+        requisitionsApi.getList({ status: 'APPROVED', page: 1, size: 1 })
+          .then(r => setApprovedCount(r.total)).catch(() => {})
+      }
     } finally { setLoading(false) }
   }
 
@@ -187,6 +209,23 @@ export default function RequisitionsPage() {
     })
   }
 
+  // 库管员「待发放」Tab：显示所有已审批待派发的申领单
+  if (isAdmin || isKeeper) {
+    tabItems.push({
+      key: 'approved',
+      label: (
+        <Badge count={approvedCount} size="small" offset={[6, -2]}>
+          <span style={{ paddingRight: approvedCount > 0 ? 12 : 0 }}>待发放</span>
+        </Badge>
+      ),
+      children: (
+        <div>
+          {table}
+        </div>
+      ),
+    })
+  }
+
   if (!isKeeper || isAdmin) {
     tabItems.push({
       key: 'mine',
@@ -240,10 +279,12 @@ export default function RequisitionsPage() {
         className="rounded-xl"
         title="申领管理"
         extra={
-          <Button type="primary" icon={<PlusOutlined />}
-            onClick={() => navigate('/requisitions/create')}>
-            发起申领
-          </Button>
+          !isKeeper && (
+            <Button type="primary" icon={<PlusOutlined />}
+              onClick={() => navigate('/requisitions/create')}>
+              发起申领
+            </Button>
+          )
         }
       >
         {tabItems.length === 1 ? (

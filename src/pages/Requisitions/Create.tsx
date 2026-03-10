@@ -2,35 +2,76 @@ import React, { useState, useEffect } from 'react'
 import {
   Card, Form, Select, DatePicker, Input, Button, Table, InputNumber,
   Row, Col, Typography, Space, message, Divider, Modal,
-  Descriptions, Tag,
+  Descriptions, Tag, Badge, Checkbox,
 } from 'antd'
 import {
   PlusOutlined, DeleteOutlined, ArrowLeftOutlined,
-  SendOutlined, SaveOutlined, ExclamationCircleOutlined,
+  SendOutlined, SaveOutlined, ExclamationCircleOutlined, RobotOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { requisitionsApi } from '@/api/requisitions'
-import { departmentsApi } from '@/api/system'
+import { departmentsApi, usersApi } from '@/api/system'
 import { materialsApi } from '@/api/materials'
-import type { Material, Department } from '@/types'
+import { aiApi } from '@/api/ai'
+import { useAuth } from '@/hooks/useAuth'
+import type { Material, Department, RequisitionRecommendation } from '@/types'
 
 const { Title } = Typography
 
+type ItemRow = { materialId?: number; quantity?: number; remark?: string; key: number }
+
+function mergeItems(prev: ItemRow[], newItems: ItemRow[]): ItemRow[] {
+  const result = [...prev]
+  for (const ni of newItems) {
+    const existing = result.find(r => r.materialId === ni.materialId)
+    if (existing) {
+      existing.quantity = ni.quantity
+      existing.remark = ni.remark
+    } else {
+      result.push(ni)
+    }
+  }
+  // 移除空行（如果合并后有真实内容）
+  const hasContent = result.some(r => r.materialId)
+  return hasContent ? result.filter(r => r.materialId || result.length === 1) : result
+}
+
+const URGENCY_CONFIG = {
+  HIGH: { color: 'red', label: '紧急' },
+  MEDIUM: { color: 'orange', label: '一般' },
+  LOW: { color: 'green', label: '低' },
+}
+
 export default function CreateRequisition() {
   const [form] = Form.useForm()
-  const [items, setItems] = useState<{ materialId?: number; quantity?: number; remark?: string; key: number }[]>([
-    { key: Date.now() }
-  ])
+  const [items, setItems] = useState<ItemRow[]>([{ key: Date.now() }])
   const [materials, setMaterials] = useState<Material[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingValues, setPendingValues] = useState<any>(null)
+
+  // AI 推荐状态
+  const [recModalOpen, setRecModalOpen] = useState(false)
+  const [recLoading, setRecLoading] = useState(false)
+  const [recommendations, setRecommendations] = useState<RequisitionRecommendation[]>([])
+  const [selectedRecs, setSelectedRecs] = useState<number[]>([])
+  const [editedQtys, setEditedQtys] = useState<Record<number, number>>({})
+
   const navigate = useNavigate()
+  const { userId } = useAuth()
 
   useEffect(() => {
     materialsApi.getActive().then(setMaterials)
     departmentsApi.getAll().then(setDepartments)
+    // 根据当前登录用户的科室自动填充申领科室
+    if (userId) {
+      usersApi.getById(userId).then(user => {
+        if (user.deptId) {
+          form.setFieldValue('deptId', user.deptId)
+        }
+      }).catch(() => {/* 静默忽略，用户手动选择 */})
+    }
   }, [])
 
   const addItem = () => setItems([...items, { key: Date.now() }])
@@ -52,7 +93,53 @@ export default function CreateRequisition() {
     })),
   })
 
-  // 保存草稿（不确认，直接保存 DRAFT）
+  // AI 智能推荐
+  const handleAiRecommend = async () => {
+    const deptId = form.getFieldValue('deptId')
+    if (!deptId) {
+      message.warning('请先选择申领科室')
+      return
+    }
+    setRecLoading(true)
+    try {
+      const data = await aiApi.getRequisitionRecommendations(deptId)
+      if (!data || data.length === 0) {
+        message.info('暂无推荐数据，该科室近6个月无出库记录')
+        return
+      }
+      setRecommendations(data)
+      setSelectedRecs(data.map(r => r.materialId))
+      setEditedQtys(Object.fromEntries(data.map(r => [r.materialId, r.recommendedQuantity])))
+      setRecModalOpen(true)
+    } catch {
+      message.error('AI 推荐获取失败，请稍后重试')
+    } finally {
+      setRecLoading(false)
+    }
+  }
+
+  // 一键导入推荐
+  const handleImportRecommendations = () => {
+    const newItems: ItemRow[] = recommendations
+      .filter(r => selectedRecs.includes(r.materialId))
+      .map(r => ({
+        key: Date.now() + r.materialId,
+        materialId: r.materialId,
+        quantity: editedQtys[r.materialId] ?? r.recommendedQuantity,
+        remark: `AI推荐：${r.reason}`,
+      }))
+
+    if (newItems.length === 0) {
+      message.warning('请至少勾选一项')
+      return
+    }
+
+    setItems(prev => mergeItems(prev, newItems))
+    setRecModalOpen(false)
+    message.success(`已导入 ${newItems.length} 项推荐耗材`)
+  }
+
+  // 保存草稿
   const handleSaveDraft = async () => {
     const values = await form.validateFields().catch(() => null)
     if (!values) return
@@ -65,7 +152,7 @@ export default function CreateRequisition() {
     } catch {} finally { setLoading(false) }
   }
 
-  // 提交申领：先校验 → 弹确认框
+  // 提交申领
   const handleSubmitClick = async () => {
     const values = await form.validateFields().catch(() => null)
     if (!values) return
@@ -74,7 +161,6 @@ export default function CreateRequisition() {
     setConfirmOpen(true)
   }
 
-  // 确认弹框中点"确认提交"
   const handleConfirmSubmit = async () => {
     if (!pendingValues) return
     setLoading(true)
@@ -90,6 +176,7 @@ export default function CreateRequisition() {
   const validItems = getValidItems()
   const selectedDeptName = departments.find(d => d.id === form.getFieldValue('deptId'))?.deptName
   const totalQty = validItems.reduce((sum, i) => sum + (i.quantity || 0), 0)
+  const deptId = Form.useWatch('deptId', form)
 
   return (
     <div>
@@ -100,7 +187,25 @@ export default function CreateRequisition() {
         </Space>
       </Card>
 
-      <Card bordered={false} className="rounded-xl">
+      <Card
+        bordered={false}
+        className="rounded-xl"
+        extra={
+          <Button
+            icon={<RobotOutlined />}
+            loading={recLoading}
+            onClick={handleAiRecommend}
+            disabled={!deptId}
+            style={{
+              background: deptId ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : undefined,
+              color: deptId ? '#fff' : undefined,
+              border: 'none',
+            }}
+          >
+            AI 智能推荐
+          </Button>
+        }
+      >
         <Form form={form} layout="vertical">
           <Row gutter={24}>
             <Col span={8}>
@@ -230,6 +335,135 @@ export default function CreateRequisition() {
             </Space>
           </Descriptions.Item>
         </Descriptions>
+      </Modal>
+
+      {/* AI 智能推荐 Modal */}
+      <Modal
+        title={
+          <Space>
+            <RobotOutlined style={{ color: '#7c3aed' }} />
+            <span>AI 智能申领推荐</span>
+            <Tag color="purple">基于近6月历史消耗 + AI预测</Tag>
+          </Space>
+        }
+        open={recModalOpen}
+        onCancel={() => setRecModalOpen(false)}
+        width={820}
+        footer={
+          <Space>
+            <Button onClick={() => setRecModalOpen(false)}>取消</Button>
+            <Button
+              type="primary"
+              style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', border: 'none' }}
+              icon={<PlusOutlined />}
+              onClick={handleImportRecommendations}
+              disabled={selectedRecs.length === 0}
+            >
+              一键导入已选（{selectedRecs.length}）项
+            </Button>
+          </Space>
+        }
+      >
+        <div style={{ marginBottom: 8, color: '#888', fontSize: 13 }}>
+          以下为 AI 根据科室历史消耗和库存预测生成的推荐申领清单，您可勾选并调整数量后导入。
+        </div>
+        <Table
+          rowKey="materialId"
+          dataSource={recommendations}
+          pagination={false}
+          size="small"
+          scroll={{ y: 400 }}
+          columns={[
+            {
+              title: '',
+              width: 40,
+              render: (_, record) => (
+                <Checkbox
+                  checked={selectedRecs.includes(record.materialId)}
+                  onChange={e => {
+                    if (e.target.checked) {
+                      setSelectedRecs(prev => [...prev, record.materialId])
+                    } else {
+                      setSelectedRecs(prev => prev.filter(id => id !== record.materialId))
+                    }
+                  }}
+                />
+              ),
+            },
+            {
+              title: '耗材名称',
+              dataIndex: 'materialName',
+              width: 160,
+              render: (name, record) => (
+                <div>
+                  <div style={{ fontWeight: 500 }}>{name}</div>
+                  <div style={{ color: '#888', fontSize: 12 }}>{record.specification}</div>
+                </div>
+              ),
+            },
+            {
+              title: '当前库存',
+              dataIndex: 'currentStock',
+              width: 80,
+              align: 'center' as const,
+              render: (v, record) => (
+                <span style={{ color: v < record.predictedConsumption * 0.3 ? '#f5222d' : undefined }}>
+                  {v}
+                </span>
+              ),
+            },
+            {
+              title: '预测消耗',
+              dataIndex: 'predictedConsumption',
+              width: 80,
+              align: 'center' as const,
+            },
+            {
+              title: '推荐数量',
+              width: 110,
+              render: (_, record) => (
+                <InputNumber
+                  min={1}
+                  size="small"
+                  value={editedQtys[record.materialId] ?? record.recommendedQuantity}
+                  onChange={v => setEditedQtys(prev => ({ ...prev, [record.materialId]: v ?? 1 }))}
+                  style={{ width: 90 }}
+                />
+              ),
+            },
+            {
+              title: '紧迫程度',
+              dataIndex: 'urgency',
+              width: 80,
+              align: 'center' as const,
+              render: (urgency: 'HIGH' | 'MEDIUM' | 'LOW') => {
+                const cfg = URGENCY_CONFIG[urgency] ?? URGENCY_CONFIG.LOW
+                return <Badge color={cfg.color} text={<span style={{ color: cfg.color }}>{cfg.label}</span>} />
+              },
+            },
+            {
+              title: '推荐理由',
+              dataIndex: 'reason',
+              render: (reason) => <span style={{ color: '#555', fontSize: 12 }}>{reason}</span>,
+            },
+          ]}
+        />
+        <div style={{ marginTop: 8, textAlign: 'right' }}>
+          <Button
+            size="small"
+            type="link"
+            onClick={() => setSelectedRecs(recommendations.map(r => r.materialId))}
+          >
+            全选
+          </Button>
+          <Button
+            size="small"
+            type="link"
+            onClick={() => setSelectedRecs([])}
+          >
+            取消全选
+          </Button>
+        </div>
       </Modal>
     </div>
   )

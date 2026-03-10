@@ -568,6 +568,63 @@ export interface AutoSuggestionVO {
   estimatedCost: number       // 后端字段名（非 estimatedPrice）
 }
 
+// ============ AI 智能申领推荐 ============
+export interface RequisitionRecommendation {
+  materialId: number
+  materialName: string
+  specification: string
+  unit: string
+  recommendedQuantity: number
+  currentStock: number
+  predictedConsumption: number
+  reason: string
+  urgency: 'HIGH' | 'MEDIUM' | 'LOW'
+}
+
+// ============ AI 辅助审批 ============
+export interface RequisitionReviewItem {
+  materialId: number
+  materialName: string
+  specification: string
+  unit: string
+  requestedQuantity: number
+  avgMonthlyConsumption: number
+  currentStock: number
+  verdict: 'NORMAL' | 'TOO_MUCH' | 'TOO_LESS' | 'ABNORMAL'
+  reason: string
+}
+
+// ============ AI 临期处置 ============
+export interface ExpiryDisposalVO {
+  inventoryId: number
+  materialName: string
+  materialCode: string
+  batchNumber: string
+  quantity: number
+  expiryDate: string
+  daysLeft: number
+  dailyConsumption: number
+  estimatedConsumable: number
+  riskQuantity: number
+  advice: 'ACCELERATE' | 'TRANSFER' | 'RETURN' | 'DAMAGE'
+  reason: string
+}
+
+// ============ AI 消耗异常检测 ============
+export interface AnomalyVO {
+  materialId: number
+  materialName: string
+  materialCode: string
+  deptId: number
+  deptName: string
+  anomalyDate: string
+  anomalyQuantity: number
+  avgDailyConsumption: number
+  anomalyRatio: number
+  severity: 'HIGH' | 'MEDIUM'
+  reason: string
+}
+
 // ============ 报表 ============
 export interface ConsumptionTrend {
   month: string

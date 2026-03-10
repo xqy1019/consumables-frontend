@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Card, Row, Col, Radio, Spin, Statistic, Button, Alert } from 'antd'
-import { RobotOutlined } from '@ant-design/icons'
+import { Card, Row, Col, Radio, Spin, Statistic, Button, Space } from 'antd'
+import { RobotOutlined, DownloadOutlined } from '@ant-design/icons'
 import * as echarts from 'echarts'
-import { reportsApi } from '@/api/reports'
+import { reportsApi, getExportCostAnalysisUrl } from '@/api/reports'
 import { aiApi } from '@/api/ai'
 import type { CostAnalysis } from '@/types'
+import AiAnalysisPanel from '@/components/AiAnalysisPanel'
 
 
 export default function CostAnalysisPage() {
@@ -16,14 +17,36 @@ export default function CostAnalysisPage() {
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
 
+  const buildSummary = (d: CostAnalysis[], m: number) => {
+    if (d.length === 0) return ''
+    const totalC = d.reduce((s, x) => s + (x.consumptionCost ?? 0), 0)
+    const totalP = d.reduce((s, x) => s + (x.purchaseCost ?? 0), 0)
+    const diff = totalP - totalC
+    const last = d[d.length - 1]
+    const prev = d[d.length - 2]
+    const cMom = prev && prev.consumptionCost
+      ? `${(((last.consumptionCost - prev.consumptionCost) / prev.consumptionCost) * 100).toFixed(1)}%`
+      : '无'
+    const pMom = prev && prev.purchaseCost
+      ? `${(((last.purchaseCost - prev.purchaseCost) / prev.purchaseCost) * 100).toFixed(1)}%`
+      : '无'
+    const detail = d.map(x =>
+      `${x.month}: 消耗¥${(x.consumptionCost ?? 0).toFixed(0)}，采购¥${(x.purchaseCost ?? 0).toFixed(0)}`
+    ).join('\n')
+    return [
+      `统计周期：近${m}个月`,
+      `消耗总成本：¥${totalC.toFixed(0)}，采购总成本：¥${totalP.toFixed(0)}`,
+      `采购与消耗差额：¥${Math.abs(diff).toFixed(0)}（${diff > 0 ? '采购超出消耗，存在库存积压风险' : '消耗超出采购，库存在持续下降'}）`,
+      `最新月环比 - 消耗成本：${cMom}，采购成本：${pMom}`,
+      `月度明细：\n${detail}`,
+    ].join('\n')
+  }
+
   const handleAiAnalyze = async () => {
     if (data.length === 0) return
     setAiLoading(true)
     try {
-      const summary = data.map(d =>
-        `${d.month}: 消耗成本¥${d.consumptionCost?.toFixed(0) ?? 0}, 采购成本¥${d.purchaseCost?.toFixed(0) ?? 0}`
-      ).join('\n')
-      const result = await aiApi.analyzeReport('成本分析', summary)
+      const result = await aiApi.analyzeReport('成本分析', buildSummary(data, months))
       setAiAnalysis(result || '暂时无法获取 AI 解读，请稍后再试。')
     } catch {
       setAiAnalysis('AI 解读请求失败，请检查网络后重试。')
@@ -40,7 +63,10 @@ export default function CostAnalysisPage() {
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { fetchData(months) }, [months])
+  useEffect(() => {
+    setAiAnalysis(null)
+    fetchData(months)
+  }, [months])
 
   useEffect(() => {
     if (!chartRef.current || data.length === 0) return
@@ -51,20 +77,19 @@ export default function CostAnalysisPage() {
       tooltip: { trigger: 'axis' },
       legend: { data: ['消耗成本', '采购成本'] },
       xAxis: { type: 'category', data: data.map(d => d.month), axisLabel: { rotate: 30 } },
-      yAxis: { type: 'value', name: '金额（元）', axisLabel: { formatter: (v: number) => `¥${(v / 1000).toFixed(0)}k` } },
+      yAxis: {
+        type: 'value', name: '金额（元）',
+        axisLabel: { formatter: (v: number) => `¥${(v / 1000).toFixed(0)}k` },
+      },
       series: [
         {
-          name: '消耗成本',
-          type: 'line',
-          smooth: true,
+          name: '消耗成本', type: 'line', smooth: true,
           data: data.map(d => d.consumptionCost),
           itemStyle: { color: '#1677ff' },
           areaStyle: { opacity: 0.1 },
         },
         {
-          name: '采购成本',
-          type: 'line',
-          smooth: true,
+          name: '采购成本', type: 'line', smooth: true,
           data: data.map(d => d.purchaseCost),
           itemStyle: { color: '#52c41a' },
           areaStyle: { opacity: 0.1 },
@@ -81,23 +106,42 @@ export default function CostAnalysisPage() {
     return () => { chartInstance.current?.dispose() }
   }, [])
 
-  const totalConsumption = data.reduce((s, d) => s + d.consumptionCost, 0)
-  const totalPurchase = data.reduce((s, d) => s + d.purchaseCost, 0)
+  const totalConsumption = data.reduce((s, d) => s + (d.consumptionCost ?? 0), 0)
+  const totalPurchase = data.reduce((s, d) => s + (d.purchaseCost ?? 0), 0)
 
   return (
     <div>
+      {/* 顶部：标题 + 时间筛选 + AI 按钮 */}
       <Card
         bordered={false}
         className="rounded-xl mb-4"
         title="成本分析"
         extra={
-          <Radio.Group value={months} onChange={e => setMonths(e.target.value)}>
-            <Radio.Button value={3}>近3月</Radio.Button>
-            <Radio.Button value={6}>近6月</Radio.Button>
-            <Radio.Button value={12}>近12月</Radio.Button>
-          </Radio.Group>
+          <Space>
+            <Radio.Group value={months} onChange={e => setMonths(e.target.value)}>
+              <Radio.Button value={3}>近3月</Radio.Button>
+              <Radio.Button value={6}>近6月</Radio.Button>
+              <Radio.Button value={12}>近12月</Radio.Button>
+            </Radio.Group>
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={() => window.open(getExportCostAnalysisUrl(months))}
+            >
+              导出 Excel
+            </Button>
+            <Button
+              icon={<RobotOutlined />}
+              loading={aiLoading}
+              onClick={handleAiAnalyze}
+              style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', border: 'none' }}
+            >
+              AI 解读
+            </Button>
+          </Space>
         }
       />
+
+      {/* 汇总统计卡 */}
       <Row gutter={16} className="mb-4">
         <Col span={12}>
           <Card bordered={false} className="rounded-xl">
@@ -122,30 +166,23 @@ export default function CostAnalysisPage() {
           </Card>
         </Col>
       </Row>
-      <Card
-        bordered={false}
-        className="rounded-xl"
-        extra={
-          <Button icon={<RobotOutlined />} loading={aiLoading} onClick={handleAiAnalyze}
-            style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', border: 'none' }}>
-            AI 智能解读
-          </Button>
-        }
-      >
+
+      {/* 图表 */}
+      <Card bordered={false} className="rounded-xl">
         <Spin spinning={loading}>
           <div ref={chartRef} className="h-[400px]" />
         </Spin>
-        {aiAnalysis && (
-          <Alert
-            type="info"
-            icon={<RobotOutlined />}
-            showIcon
-            style={{ marginTop: 16, borderRadius: 8, background: '#f5f0ff', borderColor: '#c4b5fd' }}
-            message={<span style={{ fontWeight: 600, color: '#7c3aed' }}>Claude AI 解读</span>}
-            description={<div style={{ whiteSpace: 'pre-wrap', color: '#374151', lineHeight: 1.8, marginTop: 4 }}>{aiAnalysis}</div>}
-          />
-        )}
       </Card>
+
+      {/* AI 解读面板 */}
+      {aiAnalysis && (
+        <AiAnalysisPanel
+          text={aiAnalysis}
+          refreshing={aiLoading}
+          onRefresh={handleAiAnalyze}
+          onClose={() => setAiAnalysis(null)}
+        />
+      )}
     </div>
   )
 }

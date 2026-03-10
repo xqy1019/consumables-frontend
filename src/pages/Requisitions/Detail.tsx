@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react'
 import {
   Card, Table, Tag, Button, Space, Modal, Input, message, Timeline,
-  Typography, Row, Col, Spin, Divider,
+  Typography, Row, Col, Spin, Divider, Tooltip,
 } from 'antd'
 import {
   ArrowLeftOutlined, CheckOutlined, CloseOutlined, SendOutlined,
   UserOutlined, CalendarOutlined, MedicineBoxOutlined,
   ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined,
-  FileTextOutlined, TeamOutlined, AuditOutlined,
+  FileTextOutlined, TeamOutlined, AuditOutlined, RobotOutlined,
+  ExclamationCircleOutlined, MinusCircleOutlined, QuestionCircleOutlined,
 } from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
 import { requisitionsApi } from '@/api/requisitions'
-import type { Requisition } from '@/types'
+import { aiApi } from '@/api/ai'
+import type { Requisition, RequisitionReviewItem } from '@/types'
 import { REQUISITION_STATUS } from '@/types'
 import { useSelector } from 'react-redux'
 import type { RootState } from '@/store'
@@ -46,10 +48,22 @@ export default function RequisitionDetail() {
   const [signModal, setSignModal] = useState(false)
   const [remark, setRemark] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
+  const [reviewItems, setReviewItems] = useState<RequisitionReviewItem[]>([])
+  const [reviewLoading, setReviewLoading] = useState(false)
+  const [reviewLoaded, setReviewLoaded] = useState(false)
   const navigate = useNavigate()
   const { roles } = useSelector((state: RootState) => state.auth)
   const { token } = theme.useToken()
-  const isManager = roles.includes('ADMIN') || roles.includes('DEPT_DIRECTOR') || roles.includes('WAREHOUSE_KEEPER')
+  const isAdmin = roles.includes('ADMIN')
+  const isDirector = roles.includes('DEPT_DIRECTOR')
+  const isKeeper = roles.includes('WAREHOUSE_KEEPER')
+  const isNurse = roles.includes('HEAD_NURSE')
+  // 各操作角色：审批/驳回 → 主任+管理员；派发 → 库管+管理员；签收 → 护士长+管理员
+  const canApproveOrReject = isAdmin || isDirector
+  const canDispatch = isAdmin || isKeeper
+  const canSign = isAdmin || isNurse
+  // AI 分析按钮对管理类角色开放
+  const isManager = canApproveOrReject || isKeeper
 
   const fetchData = () => {
     if (!id) return
@@ -58,6 +72,22 @@ export default function RequisitionDetail() {
   }
 
   useEffect(() => { fetchData() }, [id])
+
+  const fetchReview = () => {
+    if (!id || reviewLoading) return
+    setReviewLoading(true)
+    aiApi.getRequisitionReview(Number(id))
+      .then(items => { setReviewItems(items); setReviewLoaded(true) })
+      .catch(() => message.warning('AI 审批分析暂不可用'))
+      .finally(() => setReviewLoading(false))
+  }
+
+  const VERDICT_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+    NORMAL:   { label: '正常',   color: '#10b981', icon: <CheckOutlined /> },
+    TOO_MUCH: { label: '偏多',   color: '#f59e0b', icon: <ExclamationCircleOutlined /> },
+    TOO_LESS: { label: '偏少',   color: '#6366f1', icon: <MinusCircleOutlined /> },
+    ABNORMAL: { label: '异常',   color: '#ef4444', icon: <QuestionCircleOutlined /> },
+  }
 
   const handleApprove = async () => {
     setActionLoading(true)
@@ -158,7 +188,7 @@ export default function RequisitionDetail() {
             )}
           </Space>
           <Space>
-            {data.status === 'PENDING' && isManager && (
+            {data.status === 'PENDING' && canApproveOrReject && (
               <>
                 <Button
                   type="primary" icon={<CheckOutlined />}
@@ -176,7 +206,7 @@ export default function RequisitionDetail() {
                 </Button>
               </>
             )}
-            {data.status === 'APPROVED' && isManager && (
+            {data.status === 'APPROVED' && canDispatch && (
               <Button
                 type="primary" icon={<SendOutlined />}
                 onClick={handleDispatch} loading={actionLoading}
@@ -185,7 +215,7 @@ export default function RequisitionDetail() {
                 确认发放
               </Button>
             )}
-            {data.status === 'DISPATCHED' && (
+            {data.status === 'DISPATCHED' && canSign && (
               <Button
                 type="primary" icon={<AuditOutlined />}
                 onClick={() => { setRemark(''); setSignModal(true) }}
@@ -198,12 +228,13 @@ export default function RequisitionDetail() {
         </div>
       </Card>
 
-      <Row gutter={16}>
+      <Row gutter={[20, 0]} align="top">
         {/* 左侧主内容 */}
         <Col span={16}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* 基本信息 */}
           <Card
-            style={{ borderRadius: 12, marginBottom: 16 }}
+            style={{ borderRadius: 12 }}
             title={
               <Space>
                 <FileTextOutlined style={{ color: '#6366f1' }} />
@@ -278,7 +309,7 @@ export default function RequisitionDetail() {
               </Space>
             }
             bordered={false}
-            style={{ borderRadius: 12 }}
+            style={{ borderRadius: 12, flex: 1 }}
           >
             <Table
               rowKey="id"
@@ -306,11 +337,14 @@ export default function RequisitionDetail() {
               ]}
             />
           </Card>
+          </div>{/* end left flex column */}
         </Col>
 
         {/* 右侧 */}
         <Col span={8}>
-          {/* 审批进度 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* 审批进度 + 审批记录（合并） */}
           <Card
             title={
               <Space>
@@ -319,108 +353,175 @@ export default function RequisitionDetail() {
               </Space>
             }
             bordered={false}
-            style={{ borderRadius: 12, marginBottom: 16 }}
+            style={{ borderRadius: 12 }}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0, padding: '4px 0' }}>
+            {/* 流程步骤 */}
+            <div style={{ padding: '2px 0 4px' }}>
               {FLOW_STEPS.map((step, i) => {
                 const isRejected = data.status === 'REJECTED' && i === 1
                 const isDone = !isRejected && (
-                  (isSigned || data.status === 'DISPATCHED')
-                    ? true
-                    : currentStepIdx >= i
+                  (isSigned || data.status === 'DISPATCHED') ? true : currentStepIdx >= i
                 )
                 const isCurrent = !isRejected && currentStepIdx === i
                 const color = isRejected ? '#ef4444' : isDone ? '#10b981' : token.colorTextQuaternary
                 const bgColor = isRejected ? '#fff5f5' : isDone ? '#f0fdf4' : token.colorFillQuaternary
 
                 return (
-                  <div key={step.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                    {/* 左侧连接线 + 圆点 */}
+                  <div key={step.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    {/* 圆点 + 竖线 */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
                       <div style={{
-                        width: 32, height: 32, borderRadius: '50%',
+                        width: 28, height: 28, borderRadius: '50%',
                         background: bgColor,
                         border: `2px solid ${isCurrent || isRejected ? color : isDone ? color : token.colorBorderSecondary}`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color,
-                        fontSize: 14,
-                        transition: 'all 0.3s',
+                        color, fontSize: 13, transition: 'all 0.3s',
                       }}>
                         {isRejected ? <CloseCircleOutlined /> : step.icon}
                       </div>
                       {i < FLOW_STEPS.length - 1 && (
                         <div style={{
-                          width: 2, height: 28, marginTop: 2, marginBottom: 2,
+                          width: 2, height: 20, marginTop: 2, marginBottom: 2,
                           background: isDone && !isRejected ? '#10b981' : token.colorBorderSecondary,
                           borderRadius: 2,
                         }} />
                       )}
                     </div>
-                    {/* 右侧文字 */}
-                    <div style={{ paddingTop: 5, paddingBottom: i < FLOW_STEPS.length - 1 ? 0 : 0 }}>
-                      <div style={{
+                    {/* 文字 */}
+                    <div style={{ paddingTop: 4 }}>
+                      <span style={{
                         fontSize: 13, fontWeight: isCurrent || isRejected ? 600 : 400,
                         color: isCurrent || isRejected ? color : isDone ? token.colorText : token.colorTextQuaternary,
                       }}>
                         {isRejected ? '已驳回' : step.label}
-                      </div>
+                      </span>
                     </div>
                   </div>
                 )
               })}
             </div>
+
+            {/* 审批记录内嵌 */}
+            {data.approvalRecords?.length > 0 && (
+              <>
+                <Divider style={{ margin: '14px 0 10px' }}>
+                  <span style={{ fontSize: 11, color: token.colorTextQuaternary }}>审批记录</span>
+                </Divider>
+                <Timeline
+                  style={{ marginBottom: -8 }}
+                  items={data.approvalRecords.map(r => ({
+                    color: r.status === 'APPROVED' ? 'green' : 'red',
+                    dot: r.status === 'APPROVED'
+                      ? <CheckCircleOutlined style={{ fontSize: 13, color: '#10b981' }} />
+                      : <CloseCircleOutlined style={{ fontSize: 13, color: '#ef4444' }} />,
+                    children: (
+                      <div style={{ paddingBottom: 2 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                          <Tag
+                            color={r.status === 'APPROVED' ? 'success' : 'error'}
+                            style={{ borderRadius: 12, margin: 0, fontSize: 11 }}
+                          >
+                            {r.status === 'APPROVED' ? '审批通过' : '已驳回'}
+                          </Tag>
+                        </div>
+                        <div style={{ fontSize: 11, color: token.colorTextSecondary }}>
+                          {r.approverName} · {r.approvalTime?.replace('T', ' ').slice(0, 16)}
+                        </div>
+                        {r.remark && (
+                          <div style={{
+                            marginTop: 4, padding: '4px 8px', borderRadius: 6,
+                            background: token.colorFillQuaternary,
+                            fontSize: 11, color: token.colorText,
+                          }}>
+                            {r.remark}
+                          </div>
+                        )}
+                      </div>
+                    ),
+                  }))}
+                />
+              </>
+            )}
           </Card>
 
-          {/* 审批记录 */}
+          {/* AI 审批建议 */}
           <Card
             title={
-              <Space>
-                <ClockCircleOutlined style={{ color: '#6366f1' }} />
-                <span>审批记录</span>
+              <Space size={6}>
+                <RobotOutlined style={{ color: '#7c3aed' }} />
+                <span>AI 审批建议</span>
+                <Tag color="purple" style={{ borderRadius: 20, fontSize: 11, margin: 0 }}>Beta</Tag>
               </Space>
             }
+            extra={isManager && (
+              <Button size="small" onClick={fetchReview} loading={reviewLoading}
+                style={{ fontSize: 12 }}>
+                {reviewLoaded ? '重新分析' : '开始分析'}
+              </Button>
+            )}
             bordered={false}
-            style={{ borderRadius: 12 }}
+            style={{
+              borderRadius: 12,
+              border: `1px solid ${token.colorBorderSecondary}`,
+            }}
           >
-            {data.approvalRecords?.length > 0 ? (
-              <Timeline
-                items={data.approvalRecords.map(r => ({
-                  color: r.status === 'APPROVED' ? 'green' : 'red',
-                  dot: r.status === 'APPROVED'
-                    ? <CheckCircleOutlined style={{ fontSize: 14, color: '#10b981' }} />
-                    : <CloseCircleOutlined style={{ fontSize: 14, color: '#ef4444' }} />,
-                  children: (
-                    <div style={{ paddingBottom: 4 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                        <Tag
-                          color={r.status === 'APPROVED' ? 'success' : 'error'}
-                          style={{ borderRadius: 12, margin: 0 }}
-                        >
-                          {r.status === 'APPROVED' ? '审批通过' : '已驳回'}
+            {reviewLoading ? (
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                <Spin tip="AI 正在分析..." size="small" />
+              </div>
+            ) : !reviewLoaded ? (
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                <div style={{ color: token.colorTextQuaternary, fontSize: 12, marginBottom: 10 }}>
+                  点击「开始分析」获取 AI 审批建议
+                </div>
+                {isManager && (
+                  <Button type="primary" ghost size="small" icon={<RobotOutlined />}
+                    onClick={fetchReview}
+                    style={{ borderColor: '#7c3aed', color: '#7c3aed', fontSize: 12 }}>
+                    开始分析
+                  </Button>
+                )}
+              </div>
+            ) : reviewItems.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '20px 0', color: token.colorTextQuaternary, fontSize: 12 }}>
+                暂无分析结果（可能缺少历史数据）
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {reviewItems.map(item => {
+                  const cfg = VERDICT_CONFIG[item.verdict] ?? { label: item.verdict, color: '#999', icon: null }
+                  return (
+                    <div key={item.materialId} style={{
+                      padding: '10px 12px', borderRadius: 8,
+                      background: token.colorFillQuaternary,
+                      border: `1px solid ${cfg.color}25`,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: token.colorText, flex: 1, marginRight: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.materialName}
+                        </span>
+                        <Tag icon={cfg.icon} style={{
+                          color: cfg.color, borderColor: cfg.color + '40',
+                          background: cfg.color + '12', borderRadius: 20,
+                          fontSize: 11, margin: 0, flexShrink: 0,
+                        }}>
+                          {cfg.label}
                         </Tag>
                       </div>
-                      <div style={{ fontSize: 12, color: token.colorTextSecondary }}>
-                        {r.approverName} · {r.approvalTime?.replace('T', ' ').slice(0, 16)}
+                      <div style={{ fontSize: 11, color: token.colorTextSecondary, marginBottom: 3 }}>
+                        申领 <b>{item.requestedQuantity}</b> {item.unit} · 月均 <b>{item.avgMonthlyConsumption}</b>
                       </div>
-                      {r.remark && (
-                        <div style={{
-                          marginTop: 6, padding: '6px 10px', borderRadius: 6,
-                          background: token.colorFillQuaternary,
-                          fontSize: 12, color: token.colorText,
-                        }}>
-                          {r.remark}
-                        </div>
-                      )}
+                      <div style={{ fontSize: 11, color: token.colorTextTertiary, lineHeight: 1.6 }}>
+                        {item.reason}
+                      </div>
                     </div>
-                  ),
-                }))}
-              />
-            ) : (
-              <div style={{ textAlign: 'center', padding: '20px 0', color: token.colorTextQuaternary, fontSize: 13 }}>
-                暂无审批记录
+                  )
+                })}
               </div>
             )}
           </Card>
+
+          </div>{/* end right flex column */}
         </Col>
       </Row>
 

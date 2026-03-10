@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   Layout,
@@ -14,6 +14,8 @@ import {
   Tag,
   Empty,
   Spin,
+  Tabs,
+  Button,
 } from "antd";
 import {
   DashboardOutlined,
@@ -46,6 +48,10 @@ import {
   HomeOutlined,
   AlertOutlined,
   RollbackOutlined,
+  NotificationOutlined,
+  CloseCircleFilled,
+  WarningFilled,
+  InfoCircleFilled,
 } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "@/store/slices/authSlice";
@@ -154,12 +160,7 @@ const ALL_MENU_ITEMS = [
     label: "申领管理",
     permission: "menu:requisition",
   },
-  {
-    key: "/recall",
-    icon: <AlertOutlined />,
-    label: "召回管理",
-    permission: "menu:inventory",
-  },
+
   {
     key: "/purchase",
     icon: <ShoppingCartOutlined />,
@@ -178,6 +179,12 @@ const ALL_MENU_ITEMS = [
         label: "采购合同",
       },
     ],
+  },
+  {
+    key: "/recall",
+    icon: <AlertOutlined />,
+    label: "召回管理",
+    permission: "menu:inventory",
   },
   {
     key: "/tracing",
@@ -260,6 +267,12 @@ const ALL_MENU_ITEMS = [
     ],
   },
   {
+    key: "/docs",
+    icon: <FileTextOutlined />,
+    label: "项目文档",
+    permission: "menu:docs",
+  },
+  {
     key: "/system",
     icon: <SettingOutlined />,
     label: "系统管理",
@@ -276,7 +289,18 @@ const ALL_MENU_ITEMS = [
         label: "角色管理",
         permission: "menu:system:role",
       },
+      {
+        key: "/system/operation-logs",
+        icon: <FileTextOutlined />,
+        label: "操作日志",
+        permission: "menu:system:log",
+      },
     ],
+  },
+  {
+    key: "/notifications",
+    icon: <NotificationOutlined />,
+    label: "通知中心",
   },
 ];
 
@@ -291,17 +315,61 @@ const LEVEL_LABEL: Record<string, string> = {
   error: "紧急",
 };
 
+const NOTIF_STORAGE_KEY = "read_notification_ids";
+const getReadIds = (): string[] => {
+  try {
+    return JSON.parse(localStorage.getItem(NOTIF_STORAGE_KEY) || "[]");
+  } catch {
+    return [];
+  }
+};
+const saveReadIds = (ids: string[]) => {
+  localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(ids));
+};
+
+const LEVEL_ICON: Record<string, React.ReactNode> = {
+  error: <CloseCircleFilled style={{ color: "#ff4d4f" }} />,
+  warning: <WarningFilled style={{ color: "#faad14" }} />,
+  info: <InfoCircleFilled style={{ color: "#1890ff" }} />,
+};
+
 export default function MainLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [notifications, setNotifications] = useState<NotificationVO[]>([]);
   const [notifLoading, setNotifLoading] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [readIds, setReadIds] = useState<string[]>(getReadIds);
+  const [notifTab, setNotifTab] = useState("all");
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
   const { realName, roles } = useSelector((state: RootState) => state.auth);
   const { token } = theme.useToken();
   const { can, isAdmin } = usePermission();
+
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => !readIds.includes(n.id)).length,
+    [notifications, readIds]
+  );
+
+  const filteredNotifications = useMemo(() => {
+    if (notifTab === "all") return notifications;
+    return notifications.filter((n) => n.level === notifTab);
+  }, [notifications, notifTab]);
+
+  const markAsRead = (id: string) => {
+    if (!readIds.includes(id)) {
+      const newIds = [...readIds, id];
+      setReadIds(newIds);
+      saveReadIds(newIds);
+    }
+  };
+
+  const markAllRead = () => {
+    const allIds = notifications.map((n) => n.id);
+    setReadIds(allIds);
+    saveReadIds(allIds);
+  };
 
   const fetchNotifications = async () => {
     setNotifLoading(true);
@@ -362,6 +430,17 @@ export default function MainLayout() {
   };
 
   const path = location.pathname;
+  const isBI = path === "/reports/bi-screen";
+
+  // BI 大屏模式下切换为深色变量
+  const tx = isBI ? "#d0e8ff" : token.colorText;
+  const txDim = isBI ? "rgba(180,215,255,0.55)" : token.colorTextSecondary;
+  const txPrimary = isBI ? "#40b8ff" : token.colorPrimary;
+  const headerBg = isBI ? "#0c1730" : token.colorBgContainer;
+  const crumbBg = isBI ? "#0a1428" : token.colorBgLayout;
+  const crumbBorder = isBI
+    ? "rgba(0,200,255,0.08)"
+    : token.colorBorderSecondary;
 
   const breadcrumbMap: Record<string, { parent?: string; label: string }> = {
     "/dashboard": { label: "工作台" },
@@ -391,13 +470,22 @@ export default function MainLayout() {
     "/reports/cost-analysis": { parent: "统计报表", label: "成本分析" },
     "/system/users": { parent: "系统管理", label: "用户管理" },
     "/system/roles": { parent: "系统管理", label: "角色管理" },
+    "/system/operation-logs": { parent: "系统管理", label: "操作日志" },
+    "/docs": { label: "项目文档" },
+    "/notifications": { label: "通知中心" },
   };
 
   const getBreadcrumbItems = () => {
     const info = breadcrumbMap[path];
-    const items: { title: React.ReactNode }[] = [{ title: <HomeOutlined /> }];
-    if (info?.parent) items.push({ title: <span>{info.parent}</span> });
-    if (info) items.push({ title: <span>{info.label}</span> });
+    const dimStyle = isBI ? { color: txDim } : undefined;
+    const activeStyle = isBI ? { color: tx } : undefined;
+    const items: { title: React.ReactNode }[] = [
+      { title: <HomeOutlined style={dimStyle} /> },
+    ];
+    if (info?.parent)
+      items.push({ title: <span style={dimStyle}>{info.parent}</span> });
+    if (info)
+      items.push({ title: <span style={activeStyle}>{info.label}</span> });
     return items;
   };
 
@@ -455,11 +543,11 @@ export default function MainLayout() {
       {/* 内容区：随侧边栏宽度偏移，纵向 flex，内容独立滚动 */}
       <StyledContentLayout $collapsed={collapsed}>
         {/* 顶部导航栏 */}
-        <StyledHeader $bg={token.colorBgContainer}>
+        <StyledHeader $bg={headerBg}>
           <Space size={16}>
             <span
               style={{
-                color: token.colorText,
+                color: tx,
                 fontSize: 18,
                 cursor: "pointer",
                 display: "flex",
@@ -468,16 +556,14 @@ export default function MainLayout() {
             >
               {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             </span>
-            <span
-              style={{ color: token.colorText, fontSize: 15, fontWeight: 600 }}
-            >
+            <span style={{ color: tx, fontSize: 15, fontWeight: 600 }}>
               欢迎，{realName || "用户"}
             </span>
           </Space>
           <Space size={16}>
-            <span style={{ color: token.colorTextSecondary, fontSize: 13 }}>
+            <span style={{ color: txDim, fontSize: 13 }}>
               角色：
-              <span style={{ color: token.colorPrimary }}>
+              <span style={{ color: txPrimary }}>
                 {roles?.join(" / ") || "USER"}
               </span>
             </span>
@@ -495,87 +581,129 @@ export default function MainLayout() {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    width: 340,
+                    width: 360,
                   }}
                 >
                   <span style={{ fontWeight: 600 }}>消息通知</span>
-                  <span
-                    style={{ fontSize: 12, color: token.colorTextSecondary }}
-                  >
-                    共 {notifications.length} 条
-                  </span>
+                  <Space size={8}>
+                    <span
+                      style={{ fontSize: 12, color: token.colorTextSecondary }}
+                    >
+                      {unreadCount > 0 ? `${unreadCount} 条未读` : "全部已读"}
+                    </span>
+                    {unreadCount > 0 && (
+                      <Button type="link" size="small" onClick={markAllRead} style={{ fontSize: 12, padding: 0 }}>
+                        全部标为已读
+                      </Button>
+                    )}
+                  </Space>
                 </div>
               }
               content={
-                <div style={{ width: 340, maxHeight: 400, overflowY: "auto" }}>
-                  <Spin spinning={notifLoading}>
-                    {notifications.length === 0 ? (
-                      <Empty
-                        description="暂无通知"
-                        image={Empty.PRESENTED_IMAGE_SIMPLE}
-                        style={{ padding: "24px 0" }}
-                      />
-                    ) : (
-                      <List
-                        size="small"
-                        dataSource={notifications}
-                        renderItem={(item) => (
-                          <List.Item
-                            style={{
-                              cursor: item.linkPath ? "pointer" : "default",
-                              padding: "8px 0",
-                            }}
-                            onClick={() => {
-                              if (item.linkPath) {
-                                navigate(item.linkPath);
-                                setNotifOpen(false);
-                              }
-                            }}
-                          >
-                            <div style={{ width: "100%" }}>
-                              <div
+                <div style={{ width: 360 }}>
+                  <Tabs
+                    activeKey={notifTab}
+                    onChange={setNotifTab}
+                    size="small"
+                    items={[
+                      { key: "all", label: `全部 (${notifications.length})` },
+                      { key: "error", label: `错误 (${notifications.filter(n => n.level === "error").length})` },
+                      { key: "warning", label: `警告 (${notifications.filter(n => n.level === "warning").length})` },
+                      { key: "info", label: `信息 (${notifications.filter(n => n.level === "info").length})` },
+                    ]}
+                  />
+                  <div style={{ maxHeight: 350, overflowY: "auto" }}>
+                    <Spin spinning={notifLoading}>
+                      {filteredNotifications.length === 0 ? (
+                        <Empty
+                          description="暂无通知"
+                          image={Empty.PRESENTED_IMAGE_SIMPLE}
+                          style={{ padding: "24px 0" }}
+                        />
+                      ) : (
+                        <List
+                          size="small"
+                          dataSource={filteredNotifications}
+                          renderItem={(item) => {
+                            const isRead = readIds.includes(item.id);
+                            return (
+                              <List.Item
                                 style={{
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  marginBottom: 2,
+                                  cursor: item.linkPath ? "pointer" : "default",
+                                  padding: "8px 0",
+                                  opacity: isRead ? 0.5 : 1,
+                                }}
+                                onClick={() => {
+                                  markAsRead(item.id);
+                                  if (item.linkPath) {
+                                    navigate(item.linkPath);
+                                    setNotifOpen(false);
+                                  }
                                 }}
                               >
-                                <span style={{ fontWeight: 500, fontSize: 13 }}>
-                                  {item.title}
-                                </span>
-                                <Tag
-                                  color={LEVEL_COLOR[item.level]}
-                                  style={{ fontSize: 11, margin: 0 }}
-                                >
-                                  {LEVEL_LABEL[item.level]}
-                                </Tag>
-                              </div>
-                              <div
-                                style={{
-                                  color: token.colorTextSecondary,
-                                  fontSize: 12,
-                                }}
-                              >
-                                {item.content}
-                              </div>
-                            </div>
-                          </List.Item>
-                        )}
-                      />
-                    )}
-                  </Spin>
+                                <div style={{ width: "100%", display: "flex", gap: 8, alignItems: "flex-start" }}>
+                                  <span style={{ fontSize: 16, flexShrink: 0, marginTop: 2 }}>
+                                    {LEVEL_ICON[item.level]}
+                                  </span>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        marginBottom: 2,
+                                      }}
+                                    >
+                                      <span style={{ fontWeight: isRead ? 400 : 500, fontSize: 13 }}>
+                                        {item.title}
+                                      </span>
+                                      <Tag
+                                        color={LEVEL_COLOR[item.level]}
+                                        style={{ fontSize: 11, margin: 0 }}
+                                      >
+                                        {LEVEL_LABEL[item.level]}
+                                      </Tag>
+                                    </div>
+                                    <div
+                                      style={{
+                                        color: token.colorTextSecondary,
+                                        fontSize: 12,
+                                      }}
+                                    >
+                                      {item.content}
+                                    </div>
+                                  </div>
+                                </div>
+                              </List.Item>
+                            );
+                          }}
+                        />
+                      )}
+                    </Spin>
+                  </div>
+                  <div style={{ textAlign: "center", borderTop: `1px solid ${token.colorBorderSecondary}`, paddingTop: 8, marginTop: 4 }}>
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => {
+                        navigate("/notifications");
+                        setNotifOpen(false);
+                      }}
+                    >
+                      查看全部
+                    </Button>
+                  </div>
                 </div>
               }
             >
               <Badge
-                count={notifications.length}
+                count={unreadCount}
                 size="small"
                 offset={[2, 0]}
                 overflowCount={99}
               >
                 <BellOutlined
                   style={{
-                    color: token.colorTextSecondary,
+                    color: txDim,
                     fontSize: 16,
                     cursor: "pointer",
                   }}
@@ -589,7 +717,7 @@ export default function MainLayout() {
                   icon={<UserOutlined />}
                   size={28}
                 />
-                <span style={{ color: token.colorText, fontSize: 13 }}>
+                <span style={{ color: tx, fontSize: 13 }}>
                   {realName || "用户"}
                 </span>
               </Space>
@@ -598,15 +726,14 @@ export default function MainLayout() {
         </StyledHeader>
 
         {/* 面包屑 */}
-        <StyledBreadcrumbWrapper
-          $bg={token.colorBgLayout}
-          $borderColor={token.colorBorderSecondary}
-        >
+        <StyledBreadcrumbWrapper $bg={crumbBg} $borderColor={crumbBorder}>
           <Breadcrumb items={getBreadcrumbItems()} />
         </StyledBreadcrumbWrapper>
 
         {/* 主内容：flex: 1 占满剩余高度，overflow-y: auto 独立滚动 */}
-        <StyledContent>
+        <StyledContent
+          style={isBI ? { padding: 0, background: "#0a1428" } : undefined}
+        >
           <Outlet />
         </StyledContent>
       </StyledContentLayout>

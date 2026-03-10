@@ -15,6 +15,7 @@ import type { DashboardData, WarningVO, SafetyStockVO, AiDashboardAnalysis, AiWa
 import { useSelector } from 'react-redux'
 import type { RootState } from '@/store'
 import { useNavigate } from 'react-router-dom'
+import { usePermission } from '@/hooks/usePermission'
 import PurchaseDrawer from '@/components/PurchaseDrawer'
 import AiChat from '@/components/AiChat'
 
@@ -113,6 +114,9 @@ export default function Dashboard() {
   const { realName }                        = useSelector((s: RootState) => s.auth)
   const { token }                           = theme.useToken()
   const navigate                            = useNavigate()
+  const { can }                             = usePermission()
+  const hasAi                              = can('menu:ai')
+  const hasInventory                       = can('menu:inventory')
 
   useEffect(() => {
     reportsApi.getDashboard().then(setData).finally(() => setLoading(false))
@@ -121,6 +125,7 @@ export default function Dashboard() {
   }, [])
 
   useEffect(() => {
+    if (!hasInventory) { setAiLoading(false); return }
     Promise.all([
       aiApi.getWarnings().catch(() => [] as WarningVO[]),
       aiApi.getSafetyStock().catch(() => [] as SafetyStockVO[]),
@@ -128,16 +133,17 @@ export default function Dashboard() {
       setAiWarnings(w.slice(0, 5))
       setSafetyList(s.filter(x => x.shortage > 0).slice(0, 5))
     }).finally(() => setAiLoading(false))
-  }, [])
+  }, [hasInventory])
 
-  // 拉取 Claude 全量分析（Key 未配置时返回 null，走规则兜底）
+  // 拉取 Claude 全量分析（Key 未配置时返回 null，走规则兜底；无 menu:ai 权限时跳过）
   const fetchAnalysis = useCallback(() => {
+    if (!hasAi) return
     setAnalysisLoading(true)
     aiApi.getDashboardAnalysis().then(result => {
       if (result) setAiDashData(result)
       setLastAnalysisTime(new Date())
     }).catch(() => {}).finally(() => setAnalysisLoading(false))
-  }, [])
+  }, [hasAi])
 
   useEffect(() => { fetchAnalysis() }, [fetchAnalysis])
 

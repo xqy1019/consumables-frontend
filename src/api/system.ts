@@ -54,3 +54,14 @@ export const suppliersApi = {
 export const reportsApi = {
   getDashboard: () => request.get<unknown, DashboardData>('/reports/dashboard'),
 }
+
+// 操作日志
+export const getOperationLogs = (params: {
+  username?: string;
+  module?: string;
+  startTime?: string;
+  endTime?: string;
+  status?: number;
+  page?: number;
+  size?: number;
+}) => request.get<unknown, PageResult<any>>('/system/operation-logs', { params });

@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Table, Card, Row, Col, Tag, Tabs, Badge, Alert, Statistic, Space,
-  Select, Button, Tooltip, message,
+  Select, Button, Tooltip, message, Spin,
 } from 'antd'
 import {
   WarningOutlined, ClockCircleOutlined, ExclamationCircleOutlined,
-  SyncOutlined, CheckOutlined, ReloadOutlined,
+  SyncOutlined, CheckOutlined, ReloadOutlined, MedicineBoxOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { aiApi } from '@/api/ai'
-import type { WarningVO } from '@/types'
+import type { WarningVO, ExpiryDisposalVO, AnomalyVO } from '@/types'
 
 const LEVEL_MAP: Record<string, { label: string; color: string }> = {
   HIGH:   { label: '高危', color: 'error' },
@@ -26,6 +27,14 @@ const TYPE_MAP: Record<string, string> = {
 // 自动刷新间隔（秒）
 const REFRESH_INTERVAL = 300
 
+// 临期处置建议配置
+const ADVICE_CONFIG: Record<string, { label: string; color: string }> = {
+  ACCELERATE: { label: '加速使用', color: 'processing' },
+  TRANSFER:   { label: '跨科调拨', color: 'purple' },
+  RETURN:     { label: '联系退货', color: 'warning' },
+  DAMAGE:     { label: '办理报损', color: 'error' },
+}
+
 export default function WarningsPage() {
   const [warnings, setWarnings]               = useState<WarningVO[]>([])
   const [shortageWarnings, setShortageWarnings] = useState<WarningVO[]>([])
@@ -37,6 +46,14 @@ export default function WarningsPage() {
   // 筛选条件
   const [filterLevel, setFilterLevel]         = useState<string | undefined>()
   const [filterType, setFilterType]           = useState<string | undefined>()
+  // 临期处置
+  const [expiryDisposal, setExpiryDisposal]   = useState<ExpiryDisposalVO[]>([])
+  const [disposalLoading, setDisposalLoading] = useState(false)
+  const [disposalLoaded, setDisposalLoaded]   = useState(false)
+  // 消耗异常
+  const [anomalies, setAnomalies]             = useState<AnomalyVO[]>([])
+  const [anomalyLoading, setAnomalyLoading]   = useState(false)
+  const [anomalyLoaded, setAnomalyLoaded]     = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval>>()
 
   const fetchWarnings = useCallback(async (silent = false) => {
@@ -89,6 +106,28 @@ export default function WarningsPage() {
       return true
     })
   }
+
+  const fetchDisposal = useCallback(async () => {
+    if (disposalLoaded) return
+    setDisposalLoading(true)
+    try {
+      const data = await aiApi.getExpiryDisposal()
+      setExpiryDisposal(data)
+      setDisposalLoaded(true)
+    } catch { message.warning('临期处置数据加载失败') }
+    finally { setDisposalLoading(false) }
+  }, [disposalLoaded])
+
+  const fetchAnomalies = useCallback(async () => {
+    if (anomalyLoaded) return
+    setAnomalyLoading(true)
+    try {
+      const data = await aiApi.getAnomalyDetection()
+      setAnomalies(data)
+      setAnomalyLoaded(true)
+    } catch { message.warning('消耗异常数据加载失败') }
+    finally { setAnomalyLoading(false) }
+  }, [anomalyLoaded])
 
   const highCount = warnings.filter(w => w.severity === 'HIGH').length
   const medCount  = warnings.filter(w => w.severity === 'MEDIUM').length
@@ -189,6 +228,68 @@ export default function WarningsPage() {
     </Row>
   )
 
+  const disposalColumns: ColumnsType<ExpiryDisposalVO> = [
+    {
+      title: '耗材名称', dataIndex: 'materialName', width: 150, ellipsis: true,
+    },
+    { title: '耗材编码', dataIndex: 'materialCode', width: 120 },
+    { title: '批次号', dataIndex: 'batchNumber', width: 120 },
+    {
+      title: '库存量', dataIndex: 'quantity', width: 80,
+      render: v => <span style={{ fontWeight: 600 }}>{v}</span>,
+    },
+    {
+      title: '到期时间', dataIndex: 'expiryDate', width: 110,
+    },
+    {
+      title: '剩余天数', dataIndex: 'daysLeft', width: 90,
+      render: v => (
+        <Tag color={v <= 7 ? 'error' : v <= 14 ? 'warning' : 'default'}>{v}天</Tag>
+      ),
+    },
+    {
+      title: '风险数量', dataIndex: 'riskQuantity', width: 90,
+      render: v => <span style={{ color: '#ef4444', fontWeight: 600 }}>{v}</span>,
+    },
+    {
+      title: '处置建议', dataIndex: 'advice', width: 100,
+      render: v => {
+        const cfg = ADVICE_CONFIG[v] ?? { label: v, color: 'default' }
+        return <Tag color={cfg.color}>{cfg.label}</Tag>
+      },
+    },
+    {
+      title: 'AI 分析', dataIndex: 'reason', ellipsis: true,
+      render: v => <span style={{ fontSize: 12 }}>{v}</span>,
+    },
+  ]
+
+  const anomalyColumns: ColumnsType<AnomalyVO> = [
+    {
+      title: '严重程度', dataIndex: 'severity', width: 90,
+      render: v => <Tag color={v === 'HIGH' ? 'error' : 'warning'}>{v === 'HIGH' ? '高危' : '中危'}</Tag>,
+    },
+    { title: '科室', dataIndex: 'deptName', width: 110 },
+    { title: '耗材名称', dataIndex: 'materialName', width: 150, ellipsis: true },
+    { title: '异常日期', dataIndex: 'anomalyDate', width: 110 },
+    {
+      title: '当日消耗', dataIndex: 'anomalyQuantity', width: 90,
+      render: v => <span style={{ fontWeight: 600, color: '#ef4444' }}>{v}</span>,
+    },
+    {
+      title: '日均消耗', dataIndex: 'avgDailyConsumption', width: 90,
+      render: v => <span style={{ color: '#999' }}>{v}</span>,
+    },
+    {
+      title: '异常倍数', dataIndex: 'anomalyRatio', width: 90,
+      render: v => <Tag color="orange">×{v}</Tag>,
+    },
+    {
+      title: 'AI 分析', dataIndex: 'reason', ellipsis: true,
+      render: v => <span style={{ fontSize: 12 }}>{v}</span>,
+    },
+  ]
+
   const tabItems = [
     {
       key: 'all',
@@ -226,6 +327,40 @@ export default function WarningsPage() {
         </>
       ),
     },
+    {
+      key: 'expiry',
+      label: (
+        <Badge count={expiryDisposal.length} offset={[8, 0]} color="purple">临期处置</Badge>
+      ),
+      children: disposalLoading
+        ? <div style={{ textAlign: 'center', padding: '40px 0' }}><Spin tip="AI 分析中..." /></div>
+        : (
+          <Table
+            rowKey="inventoryId"
+            columns={disposalColumns}
+            dataSource={expiryDisposal}
+            pagination={{ pageSize: 20, showTotal: t => `共 ${t} 条`, showSizeChanger: false }}
+            scroll={{ x: 960 }}
+          />
+        ),
+    },
+    {
+      key: 'anomaly',
+      label: (
+        <Badge count={anomalies.length} offset={[8, 0]} color="cyan">消耗异常</Badge>
+      ),
+      children: anomalyLoading
+        ? <div style={{ textAlign: 'center', padding: '40px 0' }}><Spin tip="AI 分析中..." /></div>
+        : (
+          <Table
+            rowKey={(r, i) => `anomaly-${r.materialId}-${r.deptId}-${i}`}
+            columns={anomalyColumns}
+            dataSource={anomalies}
+            pagination={{ pageSize: 20, showTotal: t => `共 ${t} 条`, showSizeChanger: false }}
+            scroll={{ x: 900 }}
+          />
+        ),
+    },
   ]
 
   /* ── 倒计时格式化 ── */
@@ -247,7 +382,7 @@ export default function WarningsPage() {
 
       {/* ── 统计卡片 ── */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
+        <Col span={4}>
           <Card bordered={false} style={{ borderRadius: 12 }}>
             <Statistic
               title="全部预警"
@@ -256,7 +391,7 @@ export default function WarningsPage() {
             />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={4}>
           <Card bordered={false} style={{ borderRadius: 12 }}>
             <Statistic
               title="高危预警"
@@ -266,7 +401,7 @@ export default function WarningsPage() {
             />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={4}>
           <Card bordered={false} style={{ borderRadius: 12 }}>
             <Statistic
               title="中危预警"
@@ -276,13 +411,33 @@ export default function WarningsPage() {
             />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={4}>
           <Card bordered={false} style={{ borderRadius: 12 }}>
             <Statistic
               title="短缺预警"
               value={shortageWarnings.length}
               valueStyle={{ color: '#ff7a00' }}
               prefix={<ClockCircleOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col span={4}>
+          <Card bordered={false} style={{ borderRadius: 12 }}>
+            <Statistic
+              title="临期风险"
+              value={expiryDisposal.length}
+              valueStyle={{ color: '#9333ea' }}
+              prefix={<MedicineBoxOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col span={4}>
+          <Card bordered={false} style={{ borderRadius: 12 }}>
+            <Statistic
+              title="消耗异常"
+              value={anomalies.length}
+              valueStyle={{ color: '#0ea5e9' }}
+              prefix={<ThunderboltOutlined />}
             />
           </Card>
         </Col>
@@ -312,7 +467,13 @@ export default function WarningsPage() {
           </Space>
         }
       >
-        <Tabs items={tabItems} />
+        <Tabs
+          items={tabItems}
+          onChange={key => {
+            if (key === 'expiry') fetchDisposal()
+            if (key === 'anomaly') fetchAnomalies()
+          }}
+        />
       </Card>
     </div>
   )

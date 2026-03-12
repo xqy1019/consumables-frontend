@@ -11,19 +11,37 @@ interface AuthState {
   isAuthenticated: boolean
 }
 
-const token = localStorage.getItem('token')
-const userStr = localStorage.getItem('user')
+/** 检查 JWT token 是否已过期，避免用过期凭证初始化认证状态 */
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.exp * 1000 < Date.now()
+  } catch {
+    return true
+  }
+}
+
+const storedToken = localStorage.getItem('token')
+const validToken = storedToken && !isTokenExpired(storedToken) ? storedToken : null
+
+// token 已过期则清除 localStorage
+if (storedToken && !validToken) {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+}
+
+const userStr = validToken ? localStorage.getItem('user') : null
 let user: Partial<LoginResponse> = {}
 try { user = userStr ? JSON.parse(userStr) : {} } catch { user = {} }
 
 const initialState: AuthState = {
-  token,
+  token: validToken,
   userId: user.userId ?? null,
   username: user.username ?? null,
   realName: user.realName ?? null,
   roles: user.roles ?? [],
   permissions: user.permissions ?? [],
-  isAuthenticated: !!token,
+  isAuthenticated: !!validToken,
 }
 
 const authSlice = createSlice({

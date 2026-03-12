@@ -8,6 +8,7 @@ import ReactECharts from 'echarts-for-react'
 import type { ColumnsType } from 'antd/es/table'
 import styled from 'styled-components'
 import { aiApi } from '@/api/ai'
+import type { PredictionAccuracyVO } from '@/api/ai'
 import type { PredictionVO, SafetyStockVO } from '@/types'
 import { formatDateTime } from '@/utils/format'
 
@@ -28,6 +29,7 @@ export default function PredictionPage() {
   const [month, setMonth] = useState<string | undefined>()
   const [dept, setDept] = useState<string | undefined>()
   const [activeTab, setActiveTab] = useState<'prediction' | 'safety'>('prediction')
+  const [accuracyData, setAccuracyData] = useState<PredictionAccuracyVO | null>(null)
   const { token } = theme.useToken()
 
   // 分页列表（受月份筛选影响）
@@ -45,7 +47,7 @@ export default function PredictionPage() {
     try {
       const res = await aiApi.getPredictions({ page: 1, size: 500 })
       setAllRecords(res.records)
-    } catch {}
+    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
   }
 
   const fetchSafetyStock = async () => {
@@ -54,7 +56,16 @@ export default function PredictionPage() {
   }
 
   useEffect(() => { fetchPredictions() }, [page, month])
-  useEffect(() => { fetchAllRecords(); fetchSafetyStock() }, [])
+  const fetchAccuracy = async () => {
+    try {
+      const data = await aiApi.getPredictionAccuracy()
+      setAccuracyData(data)
+    } catch (e) {
+      console.error('获取预测准确率失败', e)
+    }
+  }
+
+  useEffect(() => { fetchAllRecords(); fetchSafetyStock(); fetchAccuracy() }, [])
 
   // 科室下拉选项（从全量数据中提取唯一值）
   const deptOptions = useMemo(() => {
@@ -77,7 +88,7 @@ export default function PredictionPage() {
       const e = map.get(p.predictionMonth)!
       e.predicted += p.predictedQuantity
       if (p.actualQuantity != null) e.actual += p.actualQuantity
-      if (p.accuracy != null && p.actualQuantity != null) { e.accSum += p.accuracy; e.accCount++ }
+      if (p.accuracyRate != null && p.actualQuantity != null) { e.accSum += p.accuracyRate; e.accCount++ }
     })
     return Array.from(map.entries())
       .sort(([a], [b]) => a.localeCompare(b))
@@ -90,9 +101,9 @@ export default function PredictionPage() {
 
   // 平均预测准确率（仅统计有实际值的记录）
   const avgAccuracy = useMemo(() => {
-    const valid = allRecords.filter(p => p.accuracy != null && p.actualQuantity != null)
+    const valid = allRecords.filter(p => p.accuracyRate != null && p.actualQuantity != null)
     if (!valid.length) return null
-    return (valid.reduce((s, p) => s + p.accuracy, 0) / valid.length).toFixed(1)
+    return (valid.reduce((s, p) => s + (p.accuracyRate ?? 0), 0) / valid.length).toFixed(1)
   }, [allRecords])
 
   const handleTrigger = async () => {
@@ -184,9 +195,9 @@ export default function PredictionPage() {
       render: v => v != null ? v : <Tag>待确认</Tag>,
     },
     {
-      title: '准确率', dataIndex: 'accuracy', width: 100,
+      title: '准确率', dataIndex: 'accuracyRate', width: 100,
       render: v => v != null
-        ? <Tag color={v >= 90 ? 'success' : v >= 75 ? 'warning' : 'error'}>{v}%</Tag>
+        ? <Tag color={v >= 90 ? 'success' : v >= 75 ? 'warning' : 'error'}>{Number(v).toFixed(1)}%</Tag>
         : '-',
     },
     {
@@ -276,11 +287,17 @@ export default function PredictionPage() {
           <Card bordered={false} style={{ borderRadius: 12 }}>
             <Statistic
               title="平均预测准确率"
-              value={avgAccuracy ?? '--'}
-              suffix={avgAccuracy ? '%' : ''}
-              valueStyle={{ color: avgAccuracy && Number(avgAccuracy) >= 85 ? '#52c41a' : '#faad14' }}
+              value={accuracyData?.avgAccuracyRate ?? avgAccuracy ?? '--'}
+              precision={1}
+              suffix={accuracyData?.avgAccuracyRate != null || avgAccuracy ? '%' : ''}
+              valueStyle={{ color: (accuracyData?.avgAccuracyRate ?? (avgAccuracy ? Number(avgAccuracy) : 0)) >= 85 ? '#52c41a' : '#faad14' }}
               prefix={<LineChartOutlined />}
             />
+            {accuracyData?.evaluatedCount != null && (
+              <div style={{ fontSize: 12, color: token.colorTextSecondary, marginTop: 4 }}>
+                已评估 {accuracyData.evaluatedCount} 条预测
+              </div>
+            )}
           </Card>
         </Col>
       </Row>

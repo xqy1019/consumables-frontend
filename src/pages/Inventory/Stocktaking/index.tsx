@@ -44,7 +44,7 @@ export default function StocktakingPage() {
       setCreateOpen(false)
       form.resetFields()
       fetchData()
-    } catch {}
+    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
   }
 
   const handleViewDetail = async (record: StocktakingVO) => {
@@ -70,7 +70,7 @@ export default function StocktakingPage() {
       message.success('盘点已完成，库存数量已更新')
       fetchData()
       setDetailOpen(false)
-    } catch {}
+    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
   }
 
   const columns: ColumnsType<StocktakingVO> = [

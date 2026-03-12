@@ -31,6 +31,9 @@ import BIScreenPage from '@/pages/Reports/BIScreen'
 import ForbiddenPage from '@/pages/Forbidden'
 import RecallPage from '@/pages/Recall'
 import ReturnPage from '@/pages/Inventory/Return'
+import InspectionPage from '@/pages/Inventory/Inspection'
+import CertificatesPage from '@/pages/Certificates'
+import BudgetPage from '@/pages/Budget'
 import DocsPage from '@/pages/Docs'
 import OperationLogPage from '@/pages/System/OperationLog'
 import NotificationsPage from '@/pages/Notifications'
@@ -94,6 +97,10 @@ export const routes: RouteObject[] = [
       {
         path: 'inventory/return',
         element: <RequirePermission permission="menu:inventory"><ReturnPage /></RequirePermission>,
+      },
+      {
+        path: 'inventory/inspection',
+        element: <RequirePermission permission="menu:inventory"><InspectionPage /></RequirePermission>,
       },
       // 申领管理
       {
@@ -184,6 +191,10 @@ export const routes: RouteObject[] = [
         path: 'system/suppliers',
         element: <RequirePermission permission="menu:supplier"><SuppliersPage /></RequirePermission>,
       },
+      // 证件管理
+      { path: 'certificates', element: <CertificatesPage /> },
+      // 预算管理
+      { path: 'budget', element: <RequirePermission permission="menu:inventory"><BudgetPage /></RequirePermission> },
       // 操作日志
       {
         path: 'system/operation-logs',

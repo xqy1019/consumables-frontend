@@ -17,6 +17,8 @@ export const inventoryApi = {
     expiryDate?: string
     supplierId?: number
     receiveDate?: string
+    inspectionStatus?: string
+    inspectionRemark?: string
     remark?: string
   }) => request.post<unknown, Inventory>('/inventory/inbound', data),
 
@@ -27,4 +29,13 @@ export const inventoryApi = {
     requisitionId?: number
     remark?: string
   }) => request.post<unknown, void>('/inventory/outbound', data),
+
+  getInspections: (params: { keyword?: string; inspectionStatus?: string; page?: number; size?: number }) =>
+    request.get<unknown, PageResult<Inventory>>('/inventory/inspections', { params }),
+
+  inspect: (id: number, data: { inspectionStatus: string; inspectionRemark?: string }) =>
+    request.put<unknown, Inventory>(`/inventory/${id}/inspect`, data),
+
+  getBatchSuggestion: (materialId: number) =>
+    request.get<unknown, Inventory[]>('/inventory/batch-suggestion', { params: { materialId } }),
 }

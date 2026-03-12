@@ -1,6 +1,49 @@
 import request from './request'
 import type { PredictionVO, SafetyStockVO, WarningVO, PageResult, AiDashboardAnalysis, ChatResponse, RequisitionRecommendation, RequisitionReviewItem, ExpiryDisposalVO, AnomalyVO } from '@/types'
 
+export interface PriceCheckItem {
+  materialId: number
+  materialName: string
+  currentPrice: number
+  quantity?: number
+}
+
+export interface PriceCheckResult {
+  materialId: number
+  materialName: string
+  currentPrice: number
+  avgHistoricalPrice: number
+  status: 'NORMAL' | 'ABNORMAL_HIGH' | 'ABNORMAL_LOW'
+  deviation: number
+  reason: string
+}
+
+export interface SupplierRecommendVO {
+  supplierId: number
+  supplierName?: string
+  avgPrice: number
+  qualityRate: number
+  orderCount: number
+  score: number
+  reason: string
+}
+
+export interface MaterialAccuracy {
+  materialId: number
+  materialName: string
+  predictedQuantity: number
+  actualQuantity: number
+  accuracyRate: number
+}
+
+export interface PredictionAccuracyVO {
+  month: string
+  avgAccuracyRate: number
+  evaluatedCount: number
+  worstMaterials?: MaterialAccuracy[]
+  predictions?: any[]
+}
+
 export const aiApi = {
   getPredictions: (params?: { month?: string; page?: number; size?: number }) =>
     request.get<unknown, PageResult<PredictionVO>>('/ai/predictions', { params }),
@@ -48,4 +91,16 @@ export const aiApi = {
   // 消耗异常检测（基于90天历史数据统计异常，上报近30天记录）
   getAnomalyDetection: () =>
     request.get<unknown, AnomalyVO[]>('/ai/anomaly-detection'),
+
+  // 采购价格异常检测
+  checkPurchasePrice: (items: PriceCheckItem[]) =>
+    request.post<unknown, PriceCheckResult[]>('/ai/check-purchase-price', items),
+
+  // AI 供应商推荐
+  getSupplierRecommend: (materialId: number, quantity?: number) =>
+    request.get<unknown, SupplierRecommendVO[]>('/ai/recommend-supplier', { params: { materialId, quantity } }),
+
+  // 预测准确率统计
+  getPredictionAccuracy: (month?: string) =>
+    request.get<unknown, PredictionAccuracyVO>('/ai/prediction-accuracy', { params: { month } }),
 }

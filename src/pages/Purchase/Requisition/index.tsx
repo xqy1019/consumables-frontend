@@ -67,7 +67,7 @@ export default function PurchaseRequisitionPage() {
       setCreateOpen(false)
       form.resetFields()
       fetchData()
-    } catch {}
+    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
   }
 
   const handleSubmit = async (id: number) => {
@@ -75,7 +75,7 @@ export default function PurchaseRequisitionPage() {
       await purchaseApi.submitRequisition(id)
       message.success('已提交审批')
       fetchData()
-    } catch {}
+    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
   }
 
   const handleApprove = async (id: number) => {
@@ -83,7 +83,7 @@ export default function PurchaseRequisitionPage() {
       await purchaseApi.approveRequisition(id, '审核通过')
       message.success('已审批通过')
       fetchData()
-    } catch {}
+    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
   }
 
   const handleReject = async (id: number) => {
@@ -91,7 +91,7 @@ export default function PurchaseRequisitionPage() {
       await purchaseApi.rejectRequisition(id, '驳回')
       message.success('已驳回')
       fetchData()
-    } catch {}
+    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
   }
 
   const handleViewDetail = async (record: RequisitionVO) => {

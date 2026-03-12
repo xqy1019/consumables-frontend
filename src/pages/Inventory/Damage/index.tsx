@@ -51,7 +51,7 @@ export default function DamagePage() {
       setSelectedInv(null)
       fetchData()
       fetchInventories()
-    } catch {}
+    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
   }
 
   const columns: ColumnsType<DamageVO> = [

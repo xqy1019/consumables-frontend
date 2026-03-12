@@ -45,7 +45,7 @@ export default function UsersPage() {
         message.success('创建成功')
       }
       setModalOpen(false); form.resetFields(); setEditRecord(null); fetchData()
-    } catch {}
+    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
   }
 
   const handleEdit = (record: User) => {

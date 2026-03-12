@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import {
   Table, Button, Space, Modal, Form, InputNumber, Select,
-  DatePicker, message, Card, Row, Col, Tag, Tabs, Badge, Input,
+  DatePicker, message, Card, Row, Col, Tag, Tabs, Badge, Input, Alert, Tooltip,
 } from 'antd'
-import { PlusOutlined, DownloadOutlined, SearchOutlined } from '@ant-design/icons'
+import { PlusOutlined, DownloadOutlined, SearchOutlined, InfoCircleOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { inventoryApi } from '@/api/inventory'
@@ -25,8 +25,11 @@ export default function InventoryPage() {
   const [departments, setDepartments] = useState<Department[]>([])
   const [params, setParams] = useState({ page: 1, size: 10, status: 1, keyword: '' })
   const [keyword, setKeyword] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const [inboundForm] = Form.useForm()
   const [outboundForm] = Form.useForm()
+  const [fefoBatches, setFefoBatches] = useState<Inventory[]>([])
+  const [fefoLoading, setFefoLoading] = useState(false)
 
   const fetchData = async () => {
     setLoading(true)
@@ -55,6 +58,7 @@ export default function InventoryPage() {
   }
 
   const handleInbound = async (values: any) => {
+    setSubmitting(true)
     try {
       const payload = {
         ...values,
@@ -68,18 +72,44 @@ export default function InventoryPage() {
       inboundForm.resetFields()
       fetchData()
       fetchAlerts()
-    } catch {}
+    } catch (e: any) {
+      message.error(e?.message || '入库失败，请重试')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleOutbound = async (values: any) => {
     if (!outboundRecord) return
+    setSubmitting(true)
     try {
       await inventoryApi.outbound({ inventoryId: outboundRecord.id, ...values })
       message.success('出库成功')
       setOutboundOpen(false)
       outboundForm.resetFields()
+      setFefoBatches([])
       fetchData()
-    } catch {}
+    } catch (e: any) {
+      message.error(e?.message || '出库失败，请重试')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const openOutbound = async (record: Inventory) => {
+    setOutboundRecord(record)
+    outboundForm.resetFields()
+    setOutboundOpen(true)
+    // 加载该耗材的 FEFO 批次建议
+    if (record.materialId) {
+      setFefoLoading(true)
+      try {
+        const batches = await inventoryApi.getBatchSuggestion(record.materialId)
+        setFefoBatches(batches)
+      } finally {
+        setFefoLoading(false)
+      }
+    }
   }
 
   const columns: ColumnsType<Inventory> = [
@@ -113,8 +143,7 @@ export default function InventoryPage() {
     {
       title: '操作', width: 80, fixed: 'right',
       render: (_, record) => record.status === 1 && record.quantity > 0 ? (
-        <Button size="small" icon={<DownloadOutlined />}
-          onClick={() => { setOutboundRecord(record); outboundForm.resetFields(); setOutboundOpen(true) }}>
+        <Button size="small" icon={<DownloadOutlined />} onClick={() => openOutbound(record)}>
           出库
         </Button>
       ) : null,
@@ -210,7 +239,9 @@ export default function InventoryPage() {
 
       {/* 入库弹窗 */}
       <Modal title="耗材入库" open={inboundOpen}
-        onCancel={() => setInboundOpen(false)} onOk={() => inboundForm.submit()}
+        onCancel={() => { if (!submitting) setInboundOpen(false) }}
+        onOk={() => inboundForm.submit()}
+        confirmLoading={submitting}
         width={600} destroyOnClose>
         <Form form={inboundForm} onFinish={handleInbound} layout="vertical" className="pt-2">
           <Row gutter={16}>
@@ -278,10 +309,30 @@ export default function InventoryPage() {
 
       {/* 出库弹窗 */}
       <Modal title={`出库 - ${outboundRecord?.materialName}`} open={outboundOpen}
-        onCancel={() => setOutboundOpen(false)} onOk={() => outboundForm.submit()}
-        destroyOnClose>
+        onCancel={() => { if (!submitting) { setOutboundOpen(false); setFefoBatches([]) } }}
+        onOk={() => outboundForm.submit()}
+        confirmLoading={submitting}
+        destroyOnClose width={520}>
         <Form form={outboundForm} onFinish={handleOutbound} layout="vertical" className="pt-2">
-          <Form.Item name="quantity" label={`出库数量（当前库存：${outboundRecord?.quantity}）`}
+          {/* FEFO 批次信息提示 */}
+          {fefoBatches.length > 0 && (() => {
+            const earliest = fefoBatches[0]
+            const isCurrentEarliest = earliest.id === outboundRecord?.id
+            return (
+              <Alert
+                type={isCurrentEarliest ? 'success' : 'warning'}
+                style={{ marginBottom: 12 }}
+                message={
+                  isCurrentEarliest
+                    ? '此批次为最近效期，符合 FEFO 原则'
+                    : `建议优先出库：批号 ${earliest.batchNumber}，有效期 ${formatDate(earliest.expiryDate) || '未知'}（剩余 ${earliest.quantity} 件）`
+                }
+                icon={<InfoCircleOutlined />}
+                showIcon
+              />
+            )
+          })()}
+          <Form.Item name="quantity" label={`出库数量（当前批次库存：${outboundRecord?.quantity}）`}
             rules={[{ required: true }, { type: 'number', max: outboundRecord?.quantity, message: '超出库存' }]}>
             <InputNumber min={1} max={outboundRecord?.quantity} className="w-full" />
           </Form.Item>

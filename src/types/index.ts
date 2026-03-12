@@ -120,6 +120,7 @@ export interface Inventory {
   receiveDate: string
   inspectionStatus: string
   inspectionRemark: string
+  inspectTime: string
   status: number
   expiring: boolean
   lowStock: boolean
@@ -448,6 +449,7 @@ export interface PredictionVO {
   actualQuantity: number
   confidence: number
   accuracy: number
+  accuracyRate?: number    // 后端每月评估后写入（accuracy_rate 字段）
   algorithm: string
   createTime: string
 }

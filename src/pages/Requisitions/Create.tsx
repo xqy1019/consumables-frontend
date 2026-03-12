@@ -149,7 +149,7 @@ export default function CreateRequisition() {
       await requisitionsApi.create(buildPayload(values))
       message.success('草稿已保存')
       navigate('/requisitions')
-    } catch {} finally { setLoading(false) }
+    } catch (e: any) { message.error(e?.message || '操作失败，请重试') } finally { setLoading(false) }
   }
 
   // 提交申领
@@ -170,7 +170,7 @@ export default function CreateRequisition() {
       await requisitionsApi.submit(created.id)
       message.success('申领单已提交，等待审批')
       navigate('/requisitions')
-    } catch {} finally { setLoading(false) }
+    } catch (e: any) { message.error(e?.message || '操作失败，请重试') } finally { setLoading(false) }
   }
 
   const validItems = getValidItems()

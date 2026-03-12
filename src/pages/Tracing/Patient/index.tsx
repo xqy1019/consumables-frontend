@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
   Button, Input, Card, Row, Col, Tag, Table,
-  Empty, Spin, Descriptions, Alert, Typography,
+  Empty, Spin, Descriptions, Alert, Typography, message,
 } from 'antd'
 import { SearchOutlined, UserOutlined, MedicineBoxOutlined, QrcodeOutlined, CheckCircleFilled } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -60,7 +60,9 @@ export default function PatientTracePage() {
         res = await tracingApi.traceByUdi(searchValue.trim())
       }
       setResult(res)
-    } catch {} finally {
+    } catch (e: any) {
+      message.error(e?.message || '查询失败，请重试')
+    } finally {
       setLoading(false)
     }
   }

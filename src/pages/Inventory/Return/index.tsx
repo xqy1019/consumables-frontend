@@ -59,7 +59,7 @@ export default function ReturnPage() {
       await returnRequestsApi.create({ ...values, items: values.items || [] })
       message.success('退料申请创建成功')
       setCreateOpen(false); form.resetFields(); fetchData()
-    } catch {}
+    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
   }
 
   const handleApprove = async (values: any) => {
@@ -72,7 +72,7 @@ export default function ReturnPage() {
         const d = await returnRequestsApi.getById(currentId)
         setDetail(d)
       }
-    } catch {}
+    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
   }
 
   const handleComplete = async (id: number) => {

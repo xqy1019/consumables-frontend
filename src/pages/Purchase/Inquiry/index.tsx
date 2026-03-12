@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import {
   Table, Button, Space, Modal, Form, Input, message, Card, Row, Col, Tag, Drawer, Descriptions, InputNumber, DatePicker, Select,
+  Alert, List,
 } from 'antd'
-import { PlusOutlined, EyeOutlined, CheckOutlined } from '@ant-design/icons'
+import { PlusOutlined, EyeOutlined, CheckOutlined, RobotOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { purchaseApi } from '@/api/purchase'
 import { materialsApi } from '@/api/materials'
 import { suppliersApi } from '@/api/system'
+import { aiApi } from '@/api/ai'
+import type { PriceCheckResult, SupplierRecommendVO } from '@/api/ai'
 import type { InquiryVO, InquiryItemVO, Material, Supplier } from '@/types'
 import { formatDateTime, formatDate } from '@/utils/format'
 
@@ -29,6 +32,10 @@ export default function InquiryPage() {
   const [materials, setMaterials] = useState<Material[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [form] = Form.useForm()
+  const [priceWarnings, setPriceWarnings] = useState<PriceCheckResult[]>([])
+  const [supplierModalVisible, setSupplierModalVisible] = useState(false)
+  const [supplierRecommends, setSupplierRecommends] = useState<SupplierRecommendVO[]>([])
+  const [loadingSupplier, setLoadingSupplier] = useState(false)
 
   const fetchData = async () => {
     setLoading(true)
@@ -57,7 +64,7 @@ export default function InquiryPage() {
       setCreateOpen(false)
       form.resetFields()
       fetchData()
-    } catch {}
+    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
   }
 
   const handleConfirm = async (id: number) => {
@@ -65,13 +72,56 @@ export default function InquiryPage() {
       await purchaseApi.confirmInquiry(id)
       message.success('已确认询价')
       fetchData()
-    } catch {}
+    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
   }
 
   const handleViewDetail = async (record: InquiryVO) => {
     const detail = await purchaseApi.getInquiryDetail(record.id)
     setCurrentRecord(detail)
     setDetailOpen(true)
+  }
+
+  const handleConfirmWithPriceCheck = async (id: number) => {
+    try {
+      const detail = await purchaseApi.getInquiryDetail(id)
+      const items = detail.items || []
+      const priceItems = items
+        .filter((item: InquiryItemVO) => item.quotedPrice)
+        .map((item: InquiryItemVO) => ({
+          materialId: item.materialId,
+          materialName: item.materialName,
+          currentPrice: item.quotedPrice,
+          quantity: item.quantity,
+        }))
+
+      if (priceItems.length > 0) {
+        try {
+          const results = await aiApi.checkPurchasePrice(priceItems)
+          const warnings = results.filter(r => r.status === 'ABNORMAL_HIGH')
+          if (warnings.length > 0) {
+            setPriceWarnings(warnings)
+          }
+        } catch (e) {
+          console.error('价格检测失败', e)
+        }
+      }
+    } catch (e) {
+      console.error('获取询价详情失败', e)
+    }
+    handleConfirm(id)
+  }
+
+  const handleSupplierRecommend = async (materialId: number) => {
+    setLoadingSupplier(true)
+    try {
+      const recommends = await aiApi.getSupplierRecommend(materialId, 100)
+      setSupplierRecommends(recommends)
+      setSupplierModalVisible(true)
+    } catch (e) {
+      message.error('获取供应商推荐失败')
+    } finally {
+      setLoadingSupplier(false)
+    }
   }
 
   const columns: ColumnsType<InquiryVO> = [
@@ -92,7 +142,7 @@ export default function InquiryPage() {
           <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewDetail(record)}>详情</Button>
           {record.status === 'SENT' && (
             <Button size="small" type="primary" icon={<CheckOutlined />}
-              onClick={() => handleConfirm(record.id)}>确认</Button>
+              onClick={() => handleConfirmWithPriceCheck(record.id)}>确认</Button>
           )}
         </Space>
       ),
@@ -120,6 +170,25 @@ export default function InquiryPage() {
           }}>新建询价</Button>
         }
       >
+        {priceWarnings.length > 0 && (
+          <Alert
+            type="warning"
+            message="价格异常提醒"
+            description={
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                {priceWarnings.map(w => (
+                  <li key={w.materialId}>
+                    {w.materialName}：{w.reason}
+                  </li>
+                ))}
+              </ul>
+            }
+            showIcon
+            closable
+            onClose={() => setPriceWarnings([])}
+            style={{ marginBottom: 16 }}
+          />
+        )}
         <Table
           rowKey="id" columns={columns} dataSource={data} loading={loading} scroll={{ x: 1000 }}
           pagination={{
@@ -180,6 +249,19 @@ export default function InquiryPage() {
                       </Form.Item>
                     </Col>
                     <Col>
+                      <Button
+                        size="small"
+                        icon={<RobotOutlined />}
+                        loading={loadingSupplier}
+                        onClick={() => {
+                          const materialId = form.getFieldValue(['items', field.name, 'materialId'])
+                          if (materialId) handleSupplierRecommend(materialId)
+                          else message.warning('请先选择耗材')
+                        }}
+                        className="mt-1"
+                      >AI推荐</Button>
+                    </Col>
+                    <Col>
                       <Button danger size="small" onClick={() => remove(field.name)} className="mt-1">删除</Button>
                     </Col>
                   </Row>
@@ -209,6 +291,34 @@ export default function InquiryPage() {
           </>
         )}
       </Drawer>
+
+      <Modal
+        title="AI供应商推荐"
+        open={supplierModalVisible}
+        onCancel={() => setSupplierModalVisible(false)}
+        footer={null}
+        width={600}
+      >
+        <List
+          dataSource={supplierRecommends}
+          renderItem={(item) => (
+            <List.Item
+              actions={[
+                <Button type="link" key="select" onClick={() => {
+                  form.setFieldValue('supplierId', item.supplierId)
+                  setSupplierModalVisible(false)
+                  message.success(`已选择供应商: ${item.supplierName || item.supplierId}`)
+                }}>选择</Button>
+              ]}
+            >
+              <List.Item.Meta
+                title={`${item.supplierName || `供应商ID: ${item.supplierId}`}  评分: ${item.score}分`}
+                description={`推荐理由：${item.reason} | 均价：¥${item.avgPrice} | 质量合格率：${(item.qualityRate || 0).toFixed(1)}%`}
+              />
+            </List.Item>
+          )}
+        />
+      </Modal>
     </div>
   )
 }

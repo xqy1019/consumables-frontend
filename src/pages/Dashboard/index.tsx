@@ -6,11 +6,13 @@ import {
   RobotOutlined, BulbOutlined, ShoppingCartOutlined,
   ArrowRightOutlined, AlertOutlined, ThunderboltOutlined,
   SyncOutlined, LineChartOutlined, SafetyCertificateOutlined,
-  ApiOutlined, ClockCircleOutlined,
+  ApiOutlined, ClockCircleOutlined, ExperimentOutlined, FireOutlined,
 } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
 import { reportsApi } from '@/api/reports'
 import { aiApi } from '@/api/ai'
+import { smallConsumablesApi } from '@/api/smallConsumables'
+import type { AnomalySummaryVO } from '@/api/smallConsumables'
 import type { DashboardData, WarningVO, SafetyStockVO, AiDashboardAnalysis, AiWarningVO, AiSuggestionVO } from '@/types'
 import { useSelector } from 'react-redux'
 import type { RootState } from '@/store'
@@ -110,6 +112,7 @@ export default function Dashboard() {
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [lastAnalysisTime, setLastAnalysisTime] = useState<Date | null>(null)
   const [purchaseDrawerOpen, setPurchaseDrawerOpen] = useState(false)
+  const [anomalySummary, setAnomalySummary] = useState<AnomalySummaryVO | null>(null)
   const [now, setNow]                       = useState(new Date())
   const { realName }                        = useSelector((s: RootState) => s.auth)
   const { token }                           = theme.useToken()
@@ -120,6 +123,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     reportsApi.getDashboard().then(setData).finally(() => setLoading(false))
+    smallConsumablesApi.getAnomalySummary().then(setAnomalySummary).catch(() => {})
     const id = setInterval(() => setNow(new Date()), 60_000)
     return () => clearInterval(id)
   }, [])
@@ -495,6 +499,79 @@ export default function Dashboard() {
           </Card>
         </Col>
       </Row>
+
+      {/* ══════════ 小耗材精细化管理 ══════════ */}
+      <Card
+        bordered={false}
+        style={{ marginBottom: 20, borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid #13c2c2' }}
+        styles={{ body: { padding: '16px 20px' } }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <Space>
+            <div style={{ width: 28, height: 28, borderRadius: 7, background: '#e6fffb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ExperimentOutlined style={{ color: '#13c2c2', fontSize: 14 }} />
+            </div>
+            <span style={{ fontWeight: 600, fontSize: 14 }}>小耗材精细化管理</span>
+            <span style={{ fontSize: 12, color: token.colorTextSecondary }}>本月实时</span>
+          </Space>
+          <Button
+            type="link" size="small"
+            style={{ fontSize: 12, padding: 0 }}
+            onClick={() => navigate('/consumables/anomaly')}
+          >
+            消耗异常分析 <ArrowRightOutlined style={{ fontSize: 10 }} />
+          </Button>
+        </div>
+        <Row gutter={[24, 0]}>
+          {[
+            {
+              label: '已配置科室', value: anomalySummary?.totalDepts ?? '-',
+              suffix: '个', color: '#13c2c2', link: '/consumables/par-levels',
+              icon: <MedicineBoxOutlined />,
+            },
+            {
+              label: '本月超限额',
+              value: anomalySummary?.dangerCount ?? '-',
+              suffix: '项',
+              color: (anomalySummary?.dangerCount ?? 0) > 0 ? '#ff4d4f' : '#52c41a',
+              link: '/consumables/anomaly',
+              icon: (anomalySummary?.dangerCount ?? 0) > 0 ? <FireOutlined /> : <CheckCircleOutlined />,
+            },
+            {
+              label: '偏高预警',
+              value: anomalySummary?.warningCount ?? '-',
+              suffix: '项',
+              color: (anomalySummary?.warningCount ?? 0) > 0 ? '#faad14' : '#52c41a',
+              link: '/consumables/anomaly',
+              icon: (anomalySummary?.warningCount ?? 0) > 0 ? <WarningOutlined /> : <CheckCircleOutlined />,
+            },
+            {
+              label: '异常科室',
+              value: anomalySummary?.abnormalDepts ?? '-',
+              suffix: '个',
+              color: (anomalySummary?.abnormalDepts ?? 0) > 0 ? '#ff7849' : '#52c41a',
+              link: '/consumables/anomaly',
+              icon: (anomalySummary?.abnormalDepts ?? 0) > 0 ? <WarningOutlined /> : <CheckCircleOutlined />,
+            },
+          ].map((item, i) => (
+            <Col key={i} xs={12} sm={6}>
+              <div
+                style={{ cursor: 'pointer', padding: '8px 0' }}
+                onClick={() => navigate(item.link)}
+              >
+                <div style={{ fontSize: 12, color: token.colorTextSecondary, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ color: item.color }}>{item.icon}</span>
+                  {item.label}
+                </div>
+                <div style={{ fontSize: 26, fontWeight: 700, color: item.color, lineHeight: 1 }}>
+                  {item.value}
+                  <span style={{ fontSize: 13, fontWeight: 400, color: token.colorTextSecondary, marginLeft: 4 }}>{item.suffix}</span>
+                </div>
+              </div>
+            </Col>
+          ))}
+        </Row>
+      </Card>
 
       {/* ══════════ AI 智能洞察（三栏） ══════════ */}
       <div style={{ marginBottom: 4 }}>

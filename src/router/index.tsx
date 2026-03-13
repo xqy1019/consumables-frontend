@@ -37,6 +37,12 @@ import BudgetPage from '@/pages/Budget'
 import DocsPage from '@/pages/Docs'
 import OperationLogPage from '@/pages/System/OperationLog'
 import NotificationsPage from '@/pages/Notifications'
+import ParLevelPage from '@/pages/Consumables/ParLevel'
+import ProceduresPage from '@/pages/Consumables/Procedures'
+import AnomalyPage from '@/pages/Consumables/Anomaly'
+import DeptInventoryPage from '@/pages/Consumables/DeptInventory'
+import WorkOrdersPage from '@/pages/Consumables/WorkOrders'
+import MonthlyReportPage from '@/pages/Consumables/MonthlyReport'
 
 import { useSelector } from 'react-redux'
 import type { RootState } from '@/store'
@@ -199,6 +205,31 @@ export const routes: RouteObject[] = [
       {
         path: 'system/operation-logs',
         element: <RequirePermission permission="menu:system:log"><OperationLogPage /></RequirePermission>,
+      },
+      // 小耗材精细化管理
+      {
+        path: 'consumables/par-levels',
+        element: <RequirePermission permission="menu:inventory"><ParLevelPage /></RequirePermission>,
+      },
+      {
+        path: 'consumables/procedures',
+        element: <RequirePermission permission="menu:inventory"><ProceduresPage /></RequirePermission>,
+      },
+      {
+        path: 'consumables/anomaly',
+        element: <RequirePermission permission="menu:inventory"><AnomalyPage /></RequirePermission>,
+      },
+      {
+        path: 'consumables/dept-inventory',
+        element: <RequirePermission permission="menu:inventory"><DeptInventoryPage /></RequirePermission>,
+      },
+      {
+        path: 'consumables/work-orders',
+        element: <RequirePermission permission="menu:inventory"><WorkOrdersPage /></RequirePermission>,
+      },
+      {
+        path: 'consumables/monthly-report',
+        element: <RequirePermission permission="menu:inventory"><MonthlyReportPage /></RequirePermission>,
       },
       // 通知中心
       { path: 'notifications', element: <NotificationsPage /> },

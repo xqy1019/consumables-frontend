@@ -167,6 +167,44 @@ const ALL_MENU_ITEMS = [
     label: "申领管理",
     permission: "menu:requisition",
   },
+  {
+    key: "/consumables",
+    icon: <ExperimentOutlined />,
+    label: "精细管控",
+    permission: "menu:inventory",
+    children: [
+      {
+        key: "/consumables/par-levels",
+        icon: <DatabaseOutlined />,
+        label: "科室定数管理",
+      },
+      {
+        key: "/consumables/procedures",
+        icon: <FileTextOutlined />,
+        label: "诊疗消耗包",
+      },
+      {
+        key: "/consumables/anomaly",
+        icon: <WarningOutlined />,
+        label: "消耗异常看板",
+      },
+      {
+        key: "/consumables/dept-inventory",
+        icon: <HomeOutlined />,
+        label: "科室二级库",
+      },
+      {
+        key: "/consumables/work-orders",
+        icon: <FileTextOutlined />,
+        label: "异常工单",
+      },
+      {
+        key: "/consumables/monthly-report",
+        icon: <BarChartOutlined />,
+        label: "月度报告",
+      },
+    ],
+  },
 
   {
     key: "/purchase",
@@ -199,6 +237,7 @@ const ALL_MENU_ITEMS = [
     label: "预算管理",
     permission: "menu:inventory",
   },
+
   {
     key: "/tracing",
     icon: <QrcodeOutlined />,
@@ -494,6 +533,15 @@ export default function MainLayout() {
     "/system/roles": { parent: "系统管理", label: "角色管理" },
     "/system/operation-logs": { parent: "系统管理", label: "操作日志" },
     "/docs": { label: "项目文档" },
+    "/consumables/par-levels": { parent: "精细化管控", label: "科室定数管理" },
+    "/consumables/procedures": { parent: "精细化管控", label: "诊疗消耗包" },
+    "/consumables/anomaly": { parent: "精细化管控", label: "消耗异常看板" },
+    "/consumables/dept-inventory": {
+      parent: "精细化管控",
+      label: "科室二级库",
+    },
+    "/consumables/work-orders": { parent: "精细化管控", label: "异常工单" },
+    "/consumables/monthly-report": { parent: "精细化管控", label: "月度报告" },
     "/notifications": { label: "通知中心" },
   };
 
@@ -522,6 +570,7 @@ export default function MainLayout() {
       return ["/basic"];
     if (path.startsWith("/tracing")) return ["/tracing"];
     if (path.startsWith("/ai")) return ["/ai"];
+    if (path.startsWith("/consumables")) return ["/consumables"];
     if (path.startsWith("/purchase")) return ["/purchase"];
     if (path.startsWith("/reports")) return ["/reports"];
     if (path.startsWith("/system")) return ["/system"];

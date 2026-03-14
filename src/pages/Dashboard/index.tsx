@@ -122,21 +122,25 @@ export default function Dashboard() {
   const hasInventory                       = can('menu:inventory')
 
   useEffect(() => {
-    reportsApi.getDashboard().then(setData).finally(() => setLoading(false))
-    smallConsumablesApi.getAnomalySummary().then(setAnomalySummary).catch(() => {})
+    let cancelled = false
+    reportsApi.getDashboard().then(d => { if (!cancelled) setData(d) }).finally(() => { if (!cancelled) setLoading(false) })
+    smallConsumablesApi.getAnomalySummary().then(d => { if (!cancelled) setAnomalySummary(d) }).catch(() => {})
     const id = setInterval(() => setNow(new Date()), 60_000)
-    return () => clearInterval(id)
+    return () => { cancelled = true; clearInterval(id) }
   }, [])
 
   useEffect(() => {
     if (!hasInventory) { setAiLoading(false); return }
+    let cancelled = false
     Promise.all([
       aiApi.getWarnings().catch(() => [] as WarningVO[]),
       aiApi.getSafetyStock().catch(() => [] as SafetyStockVO[]),
     ]).then(([w, s]) => {
+      if (cancelled) return
       setAiWarnings(w.slice(0, 5))
       setSafetyList(s.filter(x => x.shortage > 0).slice(0, 5))
-    }).finally(() => setAiLoading(false))
+    }).finally(() => { if (!cancelled) setAiLoading(false) })
+    return () => { cancelled = true }
   }, [hasInventory])
 
   // 拉取 Claude 全量分析（Key 未配置时返回 null，走规则兜底；无 menu:ai 权限时跳过）
@@ -154,7 +158,7 @@ export default function Dashboard() {
   /* AI 数据优先使用 Claude 全量返回，否则降级规则兜底 */
   const displayWarnings    = aiDashData ? aiDashData.warnings   : aiWarnings
   const displaySuggestions = aiDashData ? aiDashData.suggestions : safetyList.map(s => ({ ...s, priority: '', aiReason: '' }))
-  const highCount          = displayWarnings.filter((w: any) => w.severity === 'HIGH').length
+  const highCount          = displayWarnings.filter(w => w.severity === 'HIGH').length
   const shortageCount      = displaySuggestions.length
   const healthScore        = aiDashData?.healthScore ?? calcHealthScore(data, aiWarnings, safetyList)
   const scoreColor         = healthScore >= 85 ? '#10b981' : healthScore >= 60 ? '#f59e0b' : '#ef4444'
@@ -606,7 +610,7 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <div style={{ display:'flex', flexDirection:'column', gap: 8 }}>
-                    {(displayWarnings as any[]).slice(0, 5).map((w, i) => {
+                    {displayWarnings.slice(0, 5).map((w, i) => {
                       const sMap: Record<string, { color:string; bg:string; border:string; label:string }> = {
                         HIGH:   { color:'#ef4444', bg:'#fff5f5', border:'#fecaca', label:'高危' },
                         MEDIUM: { color:'#f59e0b', bg:'#fffbeb', border:'#fde68a', label:'中危' },
@@ -624,7 +628,7 @@ export default function Dashboard() {
                             <Tag style={{ fontSize:11, borderRadius:12, border:'none',
                               background: s.color+'20', color:s.color, flexShrink:0 }}>{s.label}</Tag>
                           </div>
-                          {w.aiReason && (
+                          {'aiReason' in w && w.aiReason && (
                             <div style={{ fontSize:11, color:s.color, marginTop:5, paddingLeft:16,
                               display:'flex', alignItems:'center', gap:4 }}>
                               <RobotOutlined style={{ fontSize:10 }} />
@@ -675,7 +679,7 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <div style={{ display:'flex', flexDirection:'column', gap: 8 }}>
-                    {(displaySuggestions as any[]).slice(0, 5).map((s, i) => {
+                    {displaySuggestions.slice(0, 5).map((s, i) => {
                       const priorityMap: Record<string, { color:string; label:string }> = {
                         '紧急': { color:'#ef4444', label:'紧急' },
                         '重要': { color:'#f59e0b', label:'重要' },

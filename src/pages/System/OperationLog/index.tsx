@@ -1,25 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { Table, Form, Input, Select, Button, DatePicker, Tag, Space } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { getOperationLogs } from '@/api/system'
+import { getOperationLogs, type OperationLogItem } from '@/api/system'
 import { formatDateTime } from '@/utils/format'
 
 const { RangePicker } = DatePicker
 const { Option } = Select
-
-interface OperationLogItem {
-  id: number
-  username: string
-  deptName: string
-  module: string
-  action: string
-  ipAddr: string
-  status: number
-  errorMsg: string
-  requestParams: string
-  durationMs: number
-  operateTime: string
-}
 
 const OperationLogPage: React.FC = () => {
   const [form] = Form.useForm()
@@ -32,7 +18,7 @@ const OperationLogPage: React.FC = () => {
     try {
       const values = form.getFieldsValue()
       const [startTime, endTime] = values.timeRange || []
-      const res: any = await getOperationLogs({
+      const res = await getOperationLogs({
         username: values.username,
         module: values.module,
         status: values.status,
@@ -41,9 +27,8 @@ const OperationLogPage: React.FC = () => {
         page,
         size: pagination.pageSize,
       })
-      const pageData = (res as any)
-      setData(pageData?.records || pageData?.content || [])
-      setPagination(prev => ({ ...prev, total: pageData?.total || pageData?.totalElements || 0, current: page }))
+      setData(res?.records || [])
+      setPagination(prev => ({ ...prev, total: res?.total || 0, current: page }))
     } finally {
       setLoading(false)
     }

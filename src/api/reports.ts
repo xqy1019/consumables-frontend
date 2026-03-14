@@ -20,11 +20,22 @@ export const reportsApi = {
 
 const API_BASE = 'http://localhost:8081'
 
-export const getExportConsumptionTrendUrl = (months = 6) =>
-  `${API_BASE}/api/v1/reports/consumption-trend/export?months=${months}&token=${localStorage.getItem('token') || ''}`
+async function getDownloadToken(): Promise<string> {
+  const res = await request.get<unknown, string>('/auth/download-token')
+  return res
+}
 
-export const getExportDeptRankingUrl = (days = 30) =>
-  `${API_BASE}/api/v1/reports/department-ranking/export?days=${days}&token=${localStorage.getItem('token') || ''}`
+export const exportConsumptionTrend = async (months = 6) => {
+  const dt = await getDownloadToken()
+  window.open(`${API_BASE}/api/v1/reports/consumption-trend/export?months=${months}&downloadToken=${dt}`)
+}
 
-export const getExportCostAnalysisUrl = (months = 6) =>
-  `${API_BASE}/api/v1/reports/cost-analysis/export?months=${months}&token=${localStorage.getItem('token') || ''}`
+export const exportDeptRanking = async (days = 30) => {
+  const dt = await getDownloadToken()
+  window.open(`${API_BASE}/api/v1/reports/department-ranking/export?days=${days}&downloadToken=${dt}`)
+}
+
+export const exportCostAnalysis = async (months = 6) => {
+  const dt = await getDownloadToken()
+  window.open(`${API_BASE}/api/v1/reports/cost-analysis/export?months=${months}&downloadToken=${dt}`)
+}

@@ -10,7 +10,9 @@ import type { TraceResult, SurgeryVO, BindingVO } from '@/types'
 import { formatDateTime } from '@/utils/format'
 
 
-const TRACE_OPTIONS = [
+type TraceType = 'patient' | 'material' | 'udi'
+
+const TRACE_OPTIONS: { key: TraceType; icon: React.ReactNode; label: string; placeholder: string; description: string; color: string; bg: string }[] = [
   {
     key: 'patient',
     icon: <UserOutlined style={{ fontSize: 22, color: '#fff' }} />,
@@ -60,8 +62,8 @@ export default function PatientTracePage() {
         res = await tracingApi.traceByUdi(searchValue.trim())
       }
       setResult(res)
-    } catch (e: any) {
-      message.error(e?.message || '查询失败，请重试')
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '查询失败，请重试')
     } finally {
       setLoading(false)
     }
@@ -100,7 +102,7 @@ export default function PatientTracePage() {
             return (
               <Col span={8} key={opt.key}>
                 <div
-                  onClick={() => { setTraceType(opt.key as any); setResult(null); setSearchValue('') }}
+                  onClick={() => { setTraceType(opt.key); setResult(null); setSearchValue('') }}
                   style={{
                     cursor: 'pointer',
                     borderRadius: 10,
@@ -274,16 +276,16 @@ export default function PatientTracePage() {
                 message={`耗材 ID：${searchValue} 的使用追溯结果`}
                 style={{ marginBottom: 16, borderRadius: 8 }}
               />
-              <Table
-                rowKey={(r: any) => r.surgeryNo || r.id}
+              <Table<Record<string, unknown>>
+                rowKey={(r) => String(r.surgeryNo || r.id)}
                 columns={[
-                  { title: '记录类型', dataIndex: 'type', width: 100, render: v => <Tag>{v || '手术使用'}</Tag> },
+                  { title: '记录类型', dataIndex: 'type', width: 100, render: v => <Tag>{(v as string) || '手术使用'}</Tag> },
                   { title: '手术/事务编号', dataIndex: 'surgeryNo', width: 180 },
                   { title: '患者', dataIndex: 'patientName', width: 100 },
                   { title: '日期', dataIndex: 'surgeryDate', width: 110 },
                   { title: '数量', dataIndex: 'quantity', width: 80 },
                 ]}
-                dataSource={(result.usages || result.surgeries || []) as any[]}
+                dataSource={(result.usages || result.surgeries || []) as Record<string, unknown>[]}
                 pagination={false}
               />
             </>

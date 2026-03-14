@@ -55,7 +55,7 @@ const budgetApi = {
     request.get<unknown, BudgetSummaryVO>('/budget/summary', { params: { year } }),
   getExecutions: (planId: number) =>
     request.get<unknown, BudgetExecution[]>(`/budget/${planId}/executions`),
-  create: (data: any) => request.post<unknown, BudgetPlanVO>('/budget', data),
+  create: (data: { deptId: number; budgetAmount: number; remark?: string; year?: number }) => request.post<unknown, BudgetPlanVO>('/budget', data),
   update: (id: number, budgetAmount: number, remark?: string) =>
     request.put<unknown, BudgetPlanVO>(`/budget/${id}`, { budgetAmount, remark }),
 }
@@ -113,8 +113,8 @@ export default function BudgetPage() {
       setCreateOpen(false)
       form.resetFields()
       fetchData()
-    } catch (e: any) {
-      message.error(e?.message || '创建失败')
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '创建失败')
     } finally {
       setSubmitting(false)
     }
@@ -129,8 +129,8 @@ export default function BudgetPage() {
       setEditRecord(null)
       editForm.resetFields()
       fetchData()
-    } catch (e: any) {
-      message.error(e?.message || '更新失败')
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '更新失败')
     } finally {
       setSubmitting(false)
     }

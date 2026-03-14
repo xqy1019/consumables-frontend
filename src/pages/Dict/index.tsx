@@ -55,7 +55,7 @@ export default function DictPage() {
       typeForm.resetFields()
       setEditType(null)
       fetchTypes()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const handleDeleteType = (id: number) => {
@@ -66,7 +66,7 @@ export default function DictPage() {
           await dictApi.deleteType(id)
           message.success('删除成功')
           fetchTypes()
-        } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+        } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
       },
     })
   }
@@ -95,7 +95,7 @@ export default function DictPage() {
       itemForm.resetFields()
       setEditItem(null)
       if (currentType) fetchItems(currentType.id)
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const handleDeleteItem = (id: number) => {
@@ -106,7 +106,7 @@ export default function DictPage() {
           await dictApi.deleteItem(id)
           message.success('删除成功')
           if (currentType) fetchItems(currentType.id)
-        } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+        } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
       },
     })
   }

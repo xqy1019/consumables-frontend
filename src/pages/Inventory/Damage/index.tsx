@@ -30,7 +30,7 @@ export default function DamagePage() {
   }
 
   const fetchInventories = async () => {
-    const res = await inventoryApi.getList({ status: 1, size: 200 })
+    const res = await inventoryApi.getList({ status: 1, size: 100 })
     setInventories(res.records)
   }
 
@@ -51,7 +51,7 @@ export default function DamagePage() {
       setSelectedInv(null)
       fetchData()
       fetchInventories()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const columns: ColumnsType<DamageVO> = [

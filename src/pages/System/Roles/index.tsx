@@ -46,7 +46,7 @@ export default function RolesPage() {
         message.success('创建成功')
       }
       setModalOpen(false); form.resetFields(); setEditRecord(null); fetchData()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const handleEdit = (record: Role) => {
@@ -63,7 +63,7 @@ export default function RolesPage() {
       const perms = await rolesApi.getAllPermissions()
       setAllPermissions(perms)
       setCheckedIds((role.permissions ?? []).map(p => p.id))
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const handleSavePermissions = async () => {
@@ -75,8 +75,8 @@ export default function RolesPage() {
       setPermDrawerOpen(false)
       // 更新本地数据
       setData(prev => prev.map(r => r.id === updated.id ? updated : r))
-    } catch (e: any) {
-      message.error(e?.message || '权限保存失败，请重试')
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '权限保存失败，请重试')
     } finally {
       setPermSaving(false)
     }

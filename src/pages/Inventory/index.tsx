@@ -72,8 +72,8 @@ export default function InventoryPage() {
       inboundForm.resetFields()
       fetchData()
       fetchAlerts()
-    } catch (e: any) {
-      message.error(e?.message || '入库失败，请重试')
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '入库失败，请重试')
     } finally {
       setSubmitting(false)
     }
@@ -89,8 +89,8 @@ export default function InventoryPage() {
       outboundForm.resetFields()
       setFefoBatches([])
       fetchData()
-    } catch (e: any) {
-      message.error(e?.message || '出库失败，请重试')
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '出库失败，请重试')
     } finally {
       setSubmitting(false)
     }

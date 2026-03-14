@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import {
-  Card, Row, Col, Table, Tag, Space, Button, Modal, InputNumber,
+  Card, Row, Col, Table, Tag, Space, Button, Modal, InputNumber, Select,
   message, Statistic, Alert, Badge, Typography, Popconfirm, Tabs,
   Empty, Progress, Descriptions,
 } from 'antd'
@@ -8,6 +8,7 @@ import {
   DatabaseOutlined, WarningOutlined, CheckCircleOutlined,
   ArrowLeftOutlined, SyncOutlined, ShoppingCartOutlined,
   FileSearchOutlined, PlusOutlined, MedicineBoxOutlined, BarChartOutlined,
+  ArrowUpOutlined, ArrowDownOutlined, MinusOutlined, LineChartOutlined,
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import {
@@ -19,6 +20,7 @@ import {
   type ReplenishmentSuggestionVO,
   type StocktakingInput,
 } from '@/api/deptInventory'
+import { smallConsumablesApi, type ConsumptionForecastVO } from '@/api/smallConsumables'
 import { departmentsApi } from '@/api/system'
 import { formatDateTime } from '@/utils/format'
 import type { Department } from '@/types'
@@ -45,6 +47,11 @@ export default function DeptInventoryPage() {
   // 消耗排名
   const [ranking, setRanking] = useState<DeptConsumptionRankVO[]>([])
   const [rankingLoading, setRankingLoading] = useState(false)
+
+  // 消耗预测
+  const [forecastDeptId, setForecastDeptId] = useState<number | null>(null)
+  const [forecast, setForecast] = useState<ConsumptionForecastVO[]>([])
+  const [forecastLoading, setForecastLoading] = useState(false)
 
   const loadSummaries = async () => {
     setLoading(true)
@@ -79,6 +86,15 @@ export default function DeptInventoryPage() {
       setRanking(await deptInventoryApi.getConsumptionRanking())
     } catch { /* ignore */ } finally {
       setRankingLoading(false)
+    }
+  }
+
+  const loadForecast = async (deptId: number) => {
+    setForecastLoading(true)
+    try {
+      setForecast(await smallConsumablesApi.getConsumptionForecast(deptId))
+    } catch { /* ignore */ } finally {
+      setForecastLoading(false)
     }
   }
 
@@ -505,6 +521,75 @@ export default function DeptInventoryPage() {
                     pagination={false}
                   />
                 </>
+              )}
+            </Card>
+          ),
+        },
+        {
+          key: 'forecast',
+          label: <Space><LineChartOutlined />消耗预测</Space>,
+          children: (
+            <Card title="科室消耗预测（加权移动平均法）">
+              <Space style={{ marginBottom: 16 }}>
+                <span>选择科室：</span>
+                <Select
+                  placeholder="请选择科室"
+                  style={{ width: 200 }}
+                  value={forecastDeptId}
+                  onChange={(v) => { setForecastDeptId(v); if (v) loadForecast(v) }}
+                  options={departments.map(d => ({ label: d.deptName, value: d.id }))}
+                  allowClear
+                  onClear={() => { setForecastDeptId(null); setForecast([]) }}
+                />
+              </Space>
+              {!forecastDeptId ? (
+                <Empty description="请选择科室查看消耗预测" />
+              ) : (
+                <Table
+                  rowKey="materialId"
+                  dataSource={forecast}
+                  loading={forecastLoading}
+                  size="small"
+                  pagination={false}
+                  columns={[
+                    { title: '耗材名称', dataIndex: 'materialName', width: 160 },
+                    { title: '单位', dataIndex: 'unit', width: 60 },
+                    {
+                      title: '近1月用量', width: 100,
+                      render: (_: unknown, r: ConsumptionForecastVO) => r.last3Months?.[0] ?? '-',
+                    },
+                    {
+                      title: '近2月用量', width: 100,
+                      render: (_: unknown, r: ConsumptionForecastVO) => r.last3Months?.[1] ?? '-',
+                    },
+                    {
+                      title: '近3月用量', width: 100,
+                      render: (_: unknown, r: ConsumptionForecastVO) => r.last3Months?.[2] ?? '-',
+                    },
+                    {
+                      title: '预测下月用量', dataIndex: 'predictedQty', width: 130,
+                      render: (v: number) => (
+                        <span style={{ fontWeight: 700, color: '#1677ff' }}>{v}</span>
+                      ),
+                    },
+                    {
+                      title: '趋势', dataIndex: 'trend', width: 80,
+                      render: (v: string) => {
+                        if (v === 'UP') return <Tag icon={<ArrowUpOutlined />} color="red">上升</Tag>
+                        if (v === 'DOWN') return <Tag icon={<ArrowDownOutlined />} color="green">下降</Tag>
+                        return <Tag icon={<MinusOutlined />} color="default">稳定</Tag>
+                      },
+                    },
+                    {
+                      title: '置信度', dataIndex: 'confidence', width: 80,
+                      render: (v: string) => {
+                        if (v === 'HIGH') return <Tag color="green">高</Tag>
+                        if (v === 'MEDIUM') return <Tag color="orange">中</Tag>
+                        return <Tag color="default">低</Tag>
+                      },
+                    },
+                  ]}
+                />
               )}
             </Card>
           ),

@@ -56,7 +56,7 @@ export default function SurgeryPage() {
       setCreateOpen(false)
       createForm.resetFields()
       fetchData()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const handleBind = async (values: any) => {
@@ -68,7 +68,7 @@ export default function SurgeryPage() {
       bindForm.resetFields()
       const detail = await tracingApi.getSurgeryDetail(currentSurgery.id)
       setCurrentSurgery(detail)
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const handleViewDetail = async (record: SurgeryVO) => {

@@ -37,7 +37,7 @@ interface PerformanceVO {
 const performanceApi = {
   getHistory: (id: number) =>
     request.get<unknown, PerformanceVO[]>(`/suppliers/${id}/performance`),
-  evaluate: (data: any) =>
+  evaluate: (data: { supplierId: number; evalYear: number; evalQuarter: number; deliveryRate: number; serviceScore: number; remark?: string }) =>
     request.post<unknown, PerformanceVO>('/suppliers/performance/evaluate', data),
   getRankings: (year: number, quarter: number) =>
     request.get<unknown, PerformanceVO[]>('/suppliers/performance/rankings', { params: { year, quarter } }),
@@ -88,7 +88,7 @@ export default function SuppliersPage() {
         message.success('创建成功')
       }
       setModalOpen(false); form.resetFields(); setEditRecord(null); fetchData()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const handleEdit = (record: Supplier) => {
@@ -127,8 +127,8 @@ export default function SuppliersPage() {
       evalForm.resetFields()
       const history = await performanceApi.getHistory(perfSupplier.id)
       setPerfHistory(history)
-    } catch (e: any) {
-      message.error(e?.message || '评价失败')
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '评价失败')
     } finally {
       setSubmitting(false)
     }
@@ -136,20 +136,29 @@ export default function SuppliersPage() {
 
   const getLicenseTag = (record: Supplier) => {
     if (!record.licenseNo) return <Tag color="default">未填写</Tag>
-    if (!record.licenseExpiry) return <Tag color="blue">{record.licenseNo}</Tag>
+    if (!record.licenseExpiry) return (
+      <Tooltip title={record.licenseNo}>
+        <Tag color="blue" style={{ maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{record.licenseNo}</Tag>
+      </Tooltip>
+    )
     const expiry = dayjs(record.licenseExpiry)
     const now = dayjs()
+    const tagStyle = { maxWidth: '100%', overflow: 'hidden' as const, textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }
     if (expiry.isBefore(now)) return (
-      <Tooltip title={`许可证已于 ${record.licenseExpiry} 过期`}>
-        <Tag color="red" icon={<WarningOutlined />}>{record.licenseNo} 已过期</Tag>
+      <Tooltip title={`${record.licenseNo}（已于 ${record.licenseExpiry} 过期）`}>
+        <Tag color="red" icon={<WarningOutlined />} style={tagStyle}>{record.licenseNo}</Tag>
       </Tooltip>
     )
     if (expiry.diff(now, 'day') <= 60) return (
-      <Tooltip title={`许可证将于 ${record.licenseExpiry} 到期`}>
-        <Tag color="orange" icon={<WarningOutlined />}>{record.licenseNo} 即将到期</Tag>
+      <Tooltip title={`${record.licenseNo}（将于 ${record.licenseExpiry} 到期）`}>
+        <Tag color="orange" icon={<WarningOutlined />} style={tagStyle}>{record.licenseNo}</Tag>
       </Tooltip>
     )
-    return <Tag color="green">{record.licenseNo}</Tag>
+    return (
+      <Tooltip title={record.licenseNo}>
+        <Tag color="green" style={tagStyle}>{record.licenseNo}</Tag>
+      </Tooltip>
+    )
   }
 
   const columns: ColumnsType<Supplier> = [

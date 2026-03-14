@@ -58,7 +58,7 @@ export default function RecallPage() {
       setCreateOpen(false)
       form.resetFields()
       fetchData()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const openDetail = async (id: number) => {
@@ -87,7 +87,7 @@ export default function RecallPage() {
       const d = await recallApi.getDetail(currentRecallId)
       setDetail(d)
       fetchData()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const columns: ColumnsType<RecallVO> = [

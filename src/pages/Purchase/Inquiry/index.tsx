@@ -64,7 +64,7 @@ export default function InquiryPage() {
       setCreateOpen(false)
       form.resetFields()
       fetchData()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const handleConfirm = async (id: number) => {
@@ -72,7 +72,7 @@ export default function InquiryPage() {
       await purchaseApi.confirmInquiry(id)
       message.success('已确认询价')
       fetchData()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const handleViewDetail = async (record: InquiryVO) => {
@@ -101,12 +101,12 @@ export default function InquiryPage() {
           if (warnings.length > 0) {
             setPriceWarnings(warnings)
           }
-        } catch (e) {
-          console.error('价格检测失败', e)
+        } catch {
+          // ignore
         }
       }
-    } catch (e) {
-      console.error('获取询价详情失败', e)
+    } catch {
+      // ignore
     }
     handleConfirm(id)
   }

@@ -40,8 +40,8 @@ export default function CertificatesPage() {
   useEffect(() => {
     setLoading(true)
     Promise.all([
-      materialsApi.getList({ size: 1000, status: 1 }).then(r => setMaterials(r.records)),
-      suppliersApi.getList({ size: 1000 }).then(r => setSuppliers(r.records)),
+      materialsApi.getList({ size: 100, status: 1 }).then(r => setMaterials(r.records)),
+      suppliersApi.getList({ size: 100 }).then(r => setSuppliers(r.records)),
     ]).finally(() => setLoading(false))
   }, [])
 

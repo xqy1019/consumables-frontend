@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import {
-  Card, Row, Col, Statistic, Table, Tag, DatePicker, Space, Spin,
+  Card, Row, Col, Statistic, Table, Tag, DatePicker, Space, Spin, Button,
   Typography, Divider, Alert, Empty,
 } from 'antd'
 import {
   BarChartOutlined, WarningOutlined, CheckCircleOutlined,
-  ArrowUpOutlined, ArrowDownOutlined, DatabaseOutlined,
+  ArrowUpOutlined, ArrowDownOutlined, DatabaseOutlined, DownloadOutlined,
 } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
-import { smallConsumablesApi, type AnomalySummaryVO, type ParSuggestionVO } from '@/api/smallConsumables'
+import { smallConsumablesApi, exportMonthlyReport, type AnomalySummaryVO, type ParSuggestionVO, type AnomalyTrendVO } from '@/api/smallConsumables'
 import { deptInventoryApi, type DeptInventorySummaryVO, type DeptConsumptionRankVO } from '@/api/deptInventory'
 import { anomalyWorkOrderApi, type WorkOrderStatsVO } from '@/api/anomalyWorkOrder'
 
@@ -23,22 +23,25 @@ export default function MonthlyReportPage() {
   const [ranking, setRanking] = useState<DeptConsumptionRankVO[]>([])
   const [workOrderStats, setWorkOrderStats] = useState<WorkOrderStatsVO | null>(null)
   const [suggestions, setSuggestions] = useState<ParSuggestionVO[]>([])
+  const [anomalyTrend, setAnomalyTrend] = useState<AnomalyTrendVO[]>([])
 
   const loadAll = async () => {
     setLoading(true)
     try {
-      const [anomalyData, summaryData, rankData, statsData, sugData] = await Promise.all([
+      const [anomalyData, summaryData, rankData, statsData, sugData, trendData] = await Promise.all([
         smallConsumablesApi.getAnomalySummary(yearMonth),
         deptInventoryApi.getSummary(),
         deptInventoryApi.getConsumptionRanking(),
         anomalyWorkOrderApi.getStats(),
         smallConsumablesApi.getParSuggestions(),
+        smallConsumablesApi.getAnomalyTrend(6),
       ])
       setAnomaly(anomalyData)
       setSummaries(summaryData)
       setRanking(rankData)
       setWorkOrderStats(statsData)
       setSuggestions(sugData)
+      setAnomalyTrend(trendData)
     } catch { /* ignore */ } finally {
       setLoading(false)
     }
@@ -79,13 +82,62 @@ export default function MonthlyReportPage() {
     grid: { bottom: 80 },
   } : null
 
+  // 异常趋势折线图（近6个月）
+  const trendOption = anomalyTrend.length > 0 ? {
+    tooltip: {
+      trigger: 'axis' as const,
+      axisPointer: { type: 'cross' as const },
+    },
+    legend: {
+      data: ['严重超标', '偏高预警'],
+      bottom: 0,
+    },
+    grid: { left: 40, right: 20, top: 20, bottom: 40 },
+    xAxis: {
+      type: 'category' as const,
+      data: anomalyTrend.map(t => t.yearMonth),
+      boundaryGap: false,
+    },
+    yAxis: { type: 'value' as const, name: '异常数量', minInterval: 1 },
+    series: [
+      {
+        name: '严重超标',
+        type: 'line',
+        stack: 'total',
+        areaStyle: { opacity: 0.3 },
+        lineStyle: { color: '#ff4d4f', width: 2 },
+        itemStyle: { color: '#ff4d4f' },
+        data: anomalyTrend.map(t => t.dangerCount),
+        smooth: true,
+      },
+      {
+        name: '偏高预警',
+        type: 'line',
+        stack: 'total',
+        areaStyle: { opacity: 0.3 },
+        lineStyle: { color: '#faad14', width: 2 },
+        itemStyle: { color: '#faad14' },
+        data: anomalyTrend.map(t => t.warningCount),
+        smooth: true,
+      },
+    ],
+  } : null
+
   return (
     <Spin spinning={loading}>
       <div style={{ padding: '24px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <Title level={4} style={{ margin: 0 }}>
-            <BarChartOutlined /> 月度精细化管理报告
-          </Title>
+          <Space>
+            <Title level={4} style={{ margin: 0 }}>
+              <BarChartOutlined /> 月度精细化管理报告
+            </Title>
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={async () => { await exportMonthlyReport(yearMonth) }}
+            >
+              导出报告
+            </Button>
+          </Space>
           <DatePicker
             picker="month"
             value={dayjs(yearMonth)}
@@ -199,6 +251,13 @@ export default function MonthlyReportPage() {
             </Card>
           </Col>
         </Row>
+
+        {/* 异常趋势（近6个月） */}
+        {trendOption && (
+          <Card size="small" title="异常趋势（近6个月）" style={{ marginBottom: 16 }}>
+            <ReactECharts option={trendOption} style={{ height: 300 }} />
+          </Card>
+        )}
 
         {/* 定数调整建议 */}
         {suggestions.length > 0 && (

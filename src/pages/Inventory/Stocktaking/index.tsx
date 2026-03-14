@@ -6,7 +6,7 @@ import {
 import { PlusOutlined, EyeOutlined, CheckOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { inventoryExtApi } from '@/api/inventoryExt'
-import type { StocktakingVO } from '@/types'
+import type { StocktakingVO, StocktakingItemVO } from '@/types'
 import { formatDateTime } from '@/utils/format'
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -44,7 +44,7 @@ export default function StocktakingPage() {
       setCreateOpen(false)
       form.resetFields()
       fetchData()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const handleViewDetail = async (record: StocktakingVO) => {
@@ -70,7 +70,7 @@ export default function StocktakingPage() {
       message.success('盘点已完成，库存数量已更新')
       fetchData()
       setDetailOpen(false)
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const columns: ColumnsType<StocktakingVO> = [
@@ -100,16 +100,16 @@ export default function StocktakingPage() {
   ]
 
   // 盘点明细表格列
-  const itemCols = [
+  const itemCols: ColumnsType<StocktakingItemVO> = [
     { title: '耗材名称', dataIndex: 'materialName', width: 150 },
     { title: '规格', dataIndex: 'specification', width: 110 },
     { title: '批号', dataIndex: 'batchNumber', width: 120 },
     { title: '单位', dataIndex: 'unit', width: 60 },
     { title: '账面数量', dataIndex: 'bookQuantity', width: 90,
-      render: (v: number, r: any) => r.systemQuantity ?? v },
+      render: (v, r) => r.systemQuantity ?? v },
     {
       title: '实际数量', width: 120,
-      render: (_: any, record: any) => currentRecord?.status !== 'COMPLETED' ? (
+      render: (_, record) => currentRecord?.status !== 'COMPLETED' ? (
         <InputNumber
           min={0} size="small" className="w-[80px]"
           value={localActual[record.id] ?? record.systemQuantity ?? 0}
@@ -119,7 +119,7 @@ export default function StocktakingPage() {
     },
     {
       title: '差异', width: 80,
-      render: (_: any, record: any) => {
+      render: (_, record) => {
         const actual = localActual[record.id] ?? record.actualQuantity ?? record.systemQuantity ?? 0
         const book = record.systemQuantity ?? 0
         const diff = actual - book

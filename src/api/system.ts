@@ -51,6 +51,20 @@ export const suppliersApi = {
 }
 
 // 操作日志
+export interface OperationLogItem {
+  id: number
+  username: string
+  deptName: string
+  module: string
+  action: string
+  ipAddr: string
+  status: number
+  errorMsg: string
+  requestParams: string
+  durationMs: number
+  operateTime: string
+}
+
 export const getOperationLogs = (params: {
   username?: string;
   module?: string;
@@ -59,4 +73,4 @@ export const getOperationLogs = (params: {
   status?: number;
   page?: number;
   size?: number;
-}) => request.get<unknown, PageResult<any>>('/system/operation-logs', { params });
+}) => request.get<unknown, PageResult<OperationLogItem>>('/system/operation-logs', { params });

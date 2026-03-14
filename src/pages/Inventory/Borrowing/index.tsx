@@ -38,7 +38,7 @@ export default function BorrowingPage() {
   }
 
   const fetchInventories = async () => {
-    const res = await inventoryApi.getList({ status: 1, size: 200 })
+    const res = await inventoryApi.getList({ status: 1, size: 100 })
     setInventories(res.records)
   }
 
@@ -65,7 +65,7 @@ export default function BorrowingPage() {
       setSelectedInv(null)
       fetchData()
       fetchInventories()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const handleReturn = async (id: number) => {
@@ -73,7 +73,7 @@ export default function BorrowingPage() {
       await inventoryExtApi.returnBorrowing(id)
       message.success('已登记归还，库存已恢复')
       fetchData()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const columns: ColumnsType<BorrowingVO> = [

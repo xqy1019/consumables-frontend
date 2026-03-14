@@ -10,7 +10,7 @@ import {
   MedicineBoxOutlined, BulbOutlined, ArrowUpOutlined, ArrowDownOutlined,
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
-import { smallConsumablesApi, getParLevelExportUrl, type ParLevelVO, type SaveParLevelRequest, type ParSuggestionVO } from '@/api/smallConsumables'
+import { smallConsumablesApi, exportParLevels, type ParLevelVO, type SaveParLevelRequest, type ParSuggestionVO } from '@/api/smallConsumables'
 import { departmentsApi } from '@/api/system'
 import { materialsApi } from '@/api/materials'
 import type { Department, Material } from '@/types'
@@ -222,7 +222,7 @@ export default function ParLevelPage() {
         <Card
           extra={
             <Space>
-              <Button icon={<DownloadOutlined />} onClick={() => window.open(getParLevelExportUrl(selectedDept?.deptId))}>
+              <Button icon={<DownloadOutlined />} onClick={async () => { await exportParLevels(selectedDept?.deptId) }}>
                 导出
               </Button>
               <Button

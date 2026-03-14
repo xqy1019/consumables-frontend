@@ -1,4 +1,5 @@
 import request from './request'
+import type { PageResult } from '@/types'
 
 export interface WorkOrderVO {
   id: number
@@ -49,8 +50,8 @@ export interface WorkOrderStatsVO {
 }
 
 export const anomalyWorkOrderApi = {
-  getAll: (deptId?: number) =>
-    request.get<unknown, WorkOrderVO[]>('/anomaly-work-orders', { params: deptId ? { deptId } : {} }),
+  getAll: (params?: { deptId?: number; page?: number; size?: number; priority?: string; status?: string }) =>
+    request.get<unknown, PageResult<WorkOrderVO>>('/anomaly-work-orders', { params: params || {} }),
 
   getById: (id: number) =>
     request.get<unknown, WorkOrderVO>(`/anomaly-work-orders/${id}`),
@@ -72,7 +73,20 @@ export const anomalyWorkOrderApi = {
 
   addComment: (id: number, content: string) =>
     request.post<unknown, CommentVO>(`/anomaly-work-orders/${id}/comments`, { content }),
+
+  batchAssign: (ids: number[], assigneeId: number) =>
+    request.put<unknown, number>('/anomaly-work-orders/batch-assign', { ids, assigneeId }),
+
+  batchClose: (ids: number[]) =>
+    request.put<unknown, number>('/anomaly-work-orders/batch-close', { ids }),
 }
 
-export const getWorkOrderExportUrl = () =>
-  `http://localhost:8081/api/v1/anomaly-work-orders/export?token=${localStorage.getItem('token') || ''}`
+async function getDownloadToken(): Promise<string> {
+  const res = await request.get<unknown, string>('/auth/download-token')
+  return res
+}
+
+export const exportWorkOrders = async () => {
+  const dt = await getDownloadToken()
+  window.open(`http://localhost:8081/api/v1/anomaly-work-orders/export?downloadToken=${dt}`)
+}

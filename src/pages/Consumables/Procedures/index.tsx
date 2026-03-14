@@ -6,18 +6,17 @@ import {
 } from 'antd'
 import {
   PlusOutlined, DeleteOutlined, EditOutlined, PlusCircleOutlined,
-  MinusCircleOutlined, PlayCircleOutlined, CheckCircleOutlined,
+  MinusCircleOutlined, CheckCircleOutlined,
   ExclamationCircleOutlined, InfoCircleOutlined, BarChartOutlined,
   FileTextOutlined, TeamOutlined,
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
-import { smallConsumablesApi, type TemplateVO, type RecordVO, type SaveTemplateRequest, type RecordRequest } from '@/api/smallConsumables'
+import { smallConsumablesApi, type TemplateVO, type SaveTemplateRequest, type ConsumptionSummaryVO } from '@/api/smallConsumables'
 import { departmentsApi } from '@/api/system'
 import { materialsApi } from '@/api/materials'
 import type { Department, Material } from '@/types'
-import { formatDateTime } from '@/utils/format'
 
 const { Text } = Typography
 
@@ -30,8 +29,9 @@ const OPERATION_LEVEL_TIP = `操作级耗材：每次操作必然独立消耗的
 
 export default function ProceduresPage() {
   const [templates, setTemplates] = useState<TemplateVO[]>([])
-  const [records, setRecords] = useState<RecordVO[]>([])
+  const [consumptionSummary, setConsumptionSummary] = useState<ConsumptionSummaryVO[]>([])
   const [loading, setLoading] = useState(false)
+  const [summaryLoading, setSummaryLoading] = useState(false)
   const [departments, setDepartments] = useState<Department[]>([])
   const [materials, setMaterials] = useState<Material[]>([])
 
@@ -39,11 +39,9 @@ export default function ProceduresPage() {
   const [editingTemplate, setEditingTemplate] = useState<TemplateVO | null>(null)
   const [templateForm] = Form.useForm()
 
-  const [recordModalOpen, setRecordModalOpen] = useState(false)
-  const [recordForm] = Form.useForm()
-  const [selectedTemplate, setSelectedTemplate] = useState<TemplateVO | null>(null)
-
-  const [recordFilter, setRecordFilter] = useState<{ deptId?: number; yearMonth?: string }>({})
+  const [summaryFilter, setSummaryFilter] = useState<{ deptId?: number; yearMonth?: string }>({
+    yearMonth: dayjs().format('YYYY-MM'),
+  })
   const { token } = theme.useToken()
 
   const loadTemplates = async () => {
@@ -51,9 +49,16 @@ export default function ProceduresPage() {
     try { setTemplates(await smallConsumablesApi.getTemplates()) } finally { setLoading(false) }
   }
 
-  const loadRecords = async () => {
-    const res = await smallConsumablesApi.getRecords(recordFilter)
-    setRecords(res)
+  const loadConsumptionSummary = async () => {
+    setSummaryLoading(true)
+    try {
+      const res = await smallConsumablesApi.getConsumptionSummary(summaryFilter)
+      setConsumptionSummary(res)
+    } catch {
+      setConsumptionSummary([])
+    } finally {
+      setSummaryLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -62,7 +67,7 @@ export default function ProceduresPage() {
     loadTemplates()
   }, [])
 
-  useEffect(() => { loadRecords() }, [recordFilter])
+  useEffect(() => { loadConsumptionSummary() }, [summaryFilter])
 
   const handleSaveTemplate = async () => {
     const values = await templateForm.validateFields()
@@ -94,64 +99,30 @@ export default function ProceduresPage() {
     setTemplateModalOpen(true)
   }
 
-  const openRecord = (t: TemplateVO) => {
-    setSelectedTemplate(t)
-    recordForm.setFieldsValue({ templateId: t.id, quantity: 1, performedAt: dayjs() })
-    setRecordModalOpen(true)
-  }
-
-  const handleAddRecord = async () => {
-    const values = await recordForm.validateFields()
-    const req: RecordRequest = {
-      ...values,
-      performedAt: values.performedAt?.format('YYYY-MM-DDTHH:mm:ss'),
-    }
-    await smallConsumablesApi.addRecord(req)
-    message.success('操作记录已保存')
-    setRecordModalOpen(false)
-    recordForm.resetFields()
-    loadRecords()
-  }
-
-  // ── 消耗统计计算 ──
-  const templateUsageMap = useMemo(() => {
-    const map = new Map<string, { name: string; count: number; totalOps: number }>()
-    records.forEach(r => {
-      const key = r.templateName
-      if (!map.has(key)) map.set(key, { name: key, count: 0, totalOps: 0 })
-      const d = map.get(key)!
-      d.count++
-      d.totalOps += r.quantity
-    })
-    return Array.from(map.values()).sort((a, b) => b.totalOps - a.totalOps)
-  }, [records])
-
-  const deptUsageMap = useMemo(() => {
-    const map = new Map<string, { name: string; recordCount: number; totalOps: number; templateSet: Set<string> }>()
-    records.forEach(r => {
-      if (!map.has(r.deptName)) map.set(r.deptName, { name: r.deptName, recordCount: 0, totalOps: 0, templateSet: new Set() })
-      const d = map.get(r.deptName)!
-      d.recordCount++
-      d.totalOps += r.quantity
-      d.templateSet.add(r.templateName)
-    })
-    return Array.from(map.values()).sort((a, b) => b.totalOps - a.totalOps)
-  }, [records])
-
+  // ── 消耗统计计算（基于 consumptionSummary） ──
   const materialConsumedMap = useMemo(() => {
-    const map = new Map<string, { name: string; unit: string; total: number }>()
-    records.forEach(r => {
-      r.consumedItems?.forEach(item => {
-        const key = item.materialName
-        if (!map.has(key)) map.set(key, { name: key, unit: item.unit, total: 0 })
-        map.get(key)!.total += item.totalQuantity
-      })
+    const map = new Map<number, { name: string; unit: string; total: number }>()
+    consumptionSummary.forEach(r => {
+      if (!map.has(r.materialId)) map.set(r.materialId, { name: r.materialName, unit: r.unit, total: 0 })
+      map.get(r.materialId)!.total += r.estimatedConsumption
     })
     return Array.from(map.values()).sort((a, b) => b.total - a.total)
-  }, [records])
+  }, [consumptionSummary])
 
-  const templateBarOption = useMemo(() => {
-    const top = templateUsageMap.slice(0, 8)
+  const deptUsageMap = useMemo(() => {
+    const map = new Map<number, { name: string; totalConsumption: number; materialCount: number; stocktakingCount: number }>()
+    consumptionSummary.forEach(r => {
+      if (!map.has(r.deptId)) map.set(r.deptId, { name: r.deptName, totalConsumption: 0, materialCount: 0, stocktakingCount: 0 })
+      const d = map.get(r.deptId)!
+      d.totalConsumption += r.estimatedConsumption
+      d.materialCount++
+      if (r.source === '盘点修正') d.stocktakingCount++
+    })
+    return Array.from(map.values()).sort((a, b) => b.totalConsumption - a.totalConsumption)
+  }, [consumptionSummary])
+
+  const materialBarOption = useMemo(() => {
+    const top = materialConsumedMap.slice(0, 8)
     return {
       tooltip: {
         trigger: 'axis',
@@ -160,7 +131,7 @@ export default function ProceduresPage() {
         formatter: (params: any[]) => {
           const idx = top.length - 1 - (params[0]?.dataIndex ?? 0)
           const d = top[idx]
-          return d ? `<b>${d.name}</b><br/>执行次数：${d.totalOps} 次<br/>记录条数：${d.count} 条` : ''
+          return d ? `<b>${d.name}</b><br/>消耗量：${d.total} ${d.unit}` : ''
         },
       },
       grid: { left: 8, right: 60, top: 12, bottom: 8, containLabel: true },
@@ -179,17 +150,17 @@ export default function ProceduresPage() {
       series: [{
         type: 'bar',
         data: top.map(d => ({
-          value: d.totalOps,
+          value: d.total,
           itemStyle: {
             color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0, colorStops: [{ offset: 0, color: '#91caff' }, { offset: 1, color: '#4096ff' }] },
             borderRadius: [0, 4, 4, 0],
           },
         })).reverse(),
-        label: { show: true, position: 'right', formatter: '{c} 次', fontSize: 11, color: token.colorTextSecondary },
+        label: { show: true, position: 'right', formatter: '{c}', fontSize: 11, color: token.colorTextSecondary },
         barMaxWidth: 22,
       }],
     }
-  }, [templateUsageMap, token])
+  }, [materialConsumedMap, token])
 
   // 判断消耗包是否包含争议耗材（手套），用于显示校准提示
   const hasControversialItems = (t: TemplateVO) =>
@@ -236,11 +207,9 @@ export default function ProceduresPage() {
     },
     { title: '说明', dataIndex: 'description', ellipsis: true },
     {
-      title: '操作', width: 200,
+      title: '操作', width: 120,
       render: (_, r) => (
         <Space>
-          <Button type="primary" size="small" icon={<PlayCircleOutlined />}
-            onClick={() => openRecord(r)}>记录操作</Button>
           <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(r)}>编辑</Button>
           <Popconfirm title="确认删除？" onConfirm={() => handleDeleteTemplate(r.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
@@ -250,28 +219,38 @@ export default function ProceduresPage() {
     },
   ]
 
-  const recordColumns: ColumnsType<RecordVO> = [
+  const summaryColumns: ColumnsType<ConsumptionSummaryVO> = [
     { title: '科室', dataIndex: 'deptName', width: 100 },
-    { title: '操作类型', dataIndex: 'templateName', width: 120 },
+    { title: '耗材名称', dataIndex: 'materialName', width: 140 },
+    { title: '规格', dataIndex: 'specification', width: 120, ellipsis: true },
+    { title: '单位', dataIndex: 'unit', width: 60 },
     {
-      title: '执行次数', dataIndex: 'quantity', width: 80,
-      render: v => <Tag color="blue">×{v}</Tag>,
+      title: '申领量', dataIndex: 'requisitionQuantity', width: 90, align: 'right',
+      render: v => <Tag color="blue">{v}</Tag>,
     },
     {
-      title: '本次消耗', width: 280,
-      render: (_, r) => (
-        <Space size={4} wrap>
-          {r.consumedItems?.map(i => (
-            <Tag key={i.materialId}>{i.materialName} {i.totalQuantity}{i.unit}</Tag>
-          ))}
-        </Space>
+      title: '盘点消耗', dataIndex: 'stocktakingConsumption', width: 90, align: 'right',
+      render: v => v != null ? v : <Text type="secondary">-</Text>,
+    },
+    {
+      title: '最终消耗', dataIndex: 'estimatedConsumption', width: 100, align: 'right',
+      sorter: (a, b) => a.estimatedConsumption - b.estimatedConsumption,
+      defaultSortOrder: 'descend',
+      render: v => (
+        <Text strong style={{ color: '#4096ff', fontSize: 14 }}>{v}</Text>
       ),
     },
     {
-      title: '操作时间', dataIndex: 'performedAt', width: 160,
-      render: v => formatDateTime(v),
+      title: '数据来源', dataIndex: 'source', width: 100,
+      filters: [
+        { text: '申领推算', value: '申领推算' },
+        { text: '盘点修正', value: '盘点修正' },
+      ],
+      onFilter: (value, record) => record.source === value,
+      render: v => (
+        <Tag color={v === '盘点修正' ? 'green' : 'blue'}>{v}</Tag>
+      ),
     },
-    { title: '患者信息', dataIndex: 'patientInfo', width: 100, ellipsis: true },
   ]
 
   return (
@@ -338,36 +317,47 @@ export default function ProceduresPage() {
             ),
           },
           {
-            key: 'records',
-            label: '操作记录',
+            key: 'consumption',
+            label: '科室消耗总览',
             children: (
-              <Card
-                title="诊疗操作记录"
-                extra={
-                  <Space>
-                    <Select
-                      placeholder="筛选科室"
-                      allowClear
-                      style={{ width: 140 }}
-                      options={departments.map(d => ({ value: d.id, label: d.deptName }))}
-                      onChange={v => setRecordFilter(f => ({ ...f, deptId: v }))}
-                    />
-                    <DatePicker
-                      picker="month"
-                      placeholder="筛选月份"
-                      onChange={v => setRecordFilter(f => ({ ...f, yearMonth: v?.format('YYYY-MM') }))}
-                    />
-                  </Space>
-                }
-              >
-                <Table
-                  rowKey="id"
-                  columns={recordColumns}
-                  dataSource={records}
-                  size="small"
-                  pagination={{ pageSize: 20 }}
+              <>
+                <Alert
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                  message="数据自动生成，无需人工录入"
+                  description="消耗数据由系统根据申领发放记录自动生成，月末盘点后自动修正。无需人工录入。"
                 />
-              </Card>
+                <Card
+                  title="科室消耗总览"
+                  extra={
+                    <Space>
+                      <Select
+                        placeholder="筛选科室"
+                        allowClear
+                        style={{ width: 140 }}
+                        options={departments.map(d => ({ value: d.id, label: d.deptName }))}
+                        onChange={v => setSummaryFilter(f => ({ ...f, deptId: v }))}
+                      />
+                      <DatePicker
+                        picker="month"
+                        placeholder="选择月份"
+                        defaultValue={dayjs()}
+                        onChange={v => setSummaryFilter(f => ({ ...f, yearMonth: v?.format('YYYY-MM') }))}
+                      />
+                    </Space>
+                  }
+                >
+                  <Table
+                    rowKey={(r) => `${r.deptId}-${r.materialId}`}
+                    columns={summaryColumns}
+                    dataSource={consumptionSummary}
+                    loading={summaryLoading}
+                    size="small"
+                    pagination={{ pageSize: 20 }}
+                  />
+                </Card>
+              </>
             ),
           },
           {
@@ -380,9 +370,9 @@ export default function ProceduresPage() {
                   <Col span={6}>
                     <Card size="small" bordered={false} style={{ background: '#f0f9ff', borderRadius: 8 }}>
                       <Statistic
-                        title={<Space size={4}><FileTextOutlined style={{ color: '#0ea5e9' }} /><span>记录总条数</span></Space>}
-                        value={records.length}
-                        suffix="条"
+                        title={<Space size={4}><FileTextOutlined style={{ color: '#0ea5e9' }} /><span>耗材种类</span></Space>}
+                        value={materialConsumedMap.length}
+                        suffix="种"
                         valueStyle={{ color: '#0ea5e9' }}
                       />
                     </Card>
@@ -390,9 +380,8 @@ export default function ProceduresPage() {
                   <Col span={6}>
                     <Card size="small" bordered={false} style={{ background: '#f0fdf4', borderRadius: 8 }}>
                       <Statistic
-                        title={<Space size={4}><PlayCircleOutlined style={{ color: '#22c55e' }} /><span>执行总次数</span></Space>}
-                        value={records.reduce((s, r) => s + r.quantity, 0)}
-                        suffix="次"
+                        title={<Space size={4}><CheckCircleOutlined style={{ color: '#22c55e' }} /><span>总消耗量</span></Space>}
+                        value={consumptionSummary.reduce((s, r) => s + r.estimatedConsumption, 0)}
                         valueStyle={{ color: '#22c55e' }}
                       />
                     </Card>
@@ -400,7 +389,7 @@ export default function ProceduresPage() {
                   <Col span={6}>
                     <Card size="small" bordered={false} style={{ background: '#fff7ed', borderRadius: 8 }}>
                       <Statistic
-                        title={<Space size={4}><TeamOutlined style={{ color: '#f59e0b' }} /><span>参与科室</span></Space>}
+                        title={<Space size={4}><TeamOutlined style={{ color: '#f59e0b' }} /><span>涉及科室</span></Space>}
                         value={deptUsageMap.length}
                         suffix="个"
                         valueStyle={{ color: '#f59e0b' }}
@@ -410,9 +399,11 @@ export default function ProceduresPage() {
                   <Col span={6}>
                     <Card size="small" bordered={false} style={{ background: '#fdf4ff', borderRadius: 8 }}>
                       <Statistic
-                        title={<Space size={4}><CheckCircleOutlined style={{ color: '#a855f7' }} /><span>消耗耗材种类</span></Space>}
-                        value={materialConsumedMap.length}
-                        suffix="种"
+                        title={<Space size={4}><CheckCircleOutlined style={{ color: '#a855f7' }} /><span>盘点修正占比</span></Space>}
+                        value={consumptionSummary.length > 0
+                          ? Math.round(consumptionSummary.filter(r => r.source === '盘点修正').length / consumptionSummary.length * 100)
+                          : 0}
+                        suffix="%"
                         valueStyle={{ color: '#a855f7' }}
                       />
                     </Card>
@@ -420,25 +411,25 @@ export default function ProceduresPage() {
                 </Row>
 
                 <Row gutter={[16, 16]}>
-                  {/* 消耗包使用频率 */}
+                  {/* 耗材消耗排名图表 */}
                   <Col xs={24} lg={14}>
                     <Card
-                      title={<Space><BarChartOutlined style={{ color: '#4096ff' }} /><span>各消耗包执行频次</span></Space>}
+                      title={<Space><BarChartOutlined style={{ color: '#4096ff' }} /><span>耗材消耗量排名</span></Space>}
                       size="small"
                       bordered={false}
                       style={{ borderRadius: 10, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
                     >
-                      {templateUsageMap.length > 0 ? (
-                        <ReactECharts option={templateBarOption} style={{ height: 260 }} />
+                      {materialConsumedMap.length > 0 ? (
+                        <ReactECharts option={materialBarOption} style={{ height: 260 }} />
                       ) : (
                         <div style={{ height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', color: token.colorTextQuaternary }}>
-                          暂无操作记录
+                          暂无消耗数据
                         </div>
                       )}
                     </Card>
                   </Col>
 
-                  {/* 耗材消耗排名 */}
+                  {/* 耗材消耗排名表格 */}
                   <Col xs={24} lg={10}>
                     <Card
                       title={<Space><CheckCircleOutlined style={{ color: '#22c55e' }} /><span>耗材消耗排名</span></Space>}
@@ -490,28 +481,18 @@ export default function ProceduresPage() {
                       columns={[
                         { title: '科室', dataIndex: 'name', width: 120 },
                         {
-                          title: '记录条数', dataIndex: 'recordCount', width: 100,
-                          render: v => <Tag color="blue">×{v}</Tag>,
+                          title: '耗材种类', dataIndex: 'materialCount', width: 100,
+                          render: v => <Tag color="blue">{v} 种</Tag>,
                         },
                         {
-                          title: '累计执行次数', dataIndex: 'totalOps', width: 120,
-                          sorter: (a, b) => a.totalOps - b.totalOps,
+                          title: '总消耗量', dataIndex: 'totalConsumption', width: 120,
+                          sorter: (a, b) => a.totalConsumption - b.totalConsumption,
                           defaultSortOrder: 'descend',
-                          render: v => <Text strong style={{ color: '#f59e0b' }}>{v} 次</Text>,
+                          render: v => <Text strong style={{ color: '#f59e0b' }}>{v}</Text>,
                         },
                         {
-                          title: '使用消耗包种类', dataIndex: 'templateSet', width: 120,
-                          render: s => <Tag color="purple">{s.size} 种</Tag>,
-                        },
-                        {
-                          title: '主要操作类型',
-                          render: (_, r) => (
-                            <Space size={4} wrap>
-                              {Array.from((r as any).templateSet as Set<string>).slice(0, 4).map(t => (
-                                <Tag key={t} color="default">{t}</Tag>
-                              ))}
-                            </Space>
-                          ),
+                          title: '盘点修正条数', dataIndex: 'stocktakingCount', width: 120,
+                          render: v => v > 0 ? <Tag color="green">{v} 条</Tag> : <Text type="secondary">0</Text>,
                         },
                       ]}
                     />
@@ -635,71 +616,6 @@ export default function ProceduresPage() {
               </>
             )}
           </Form.List>
-        </Form>
-      </Modal>
-
-      {/* 记录操作弹窗 */}
-      <Modal
-        title={`记录操作：${selectedTemplate?.name}`}
-        open={recordModalOpen}
-        onOk={handleAddRecord}
-        onCancel={() => {
-          setRecordModalOpen(false)
-          recordForm.resetFields()
-        }}
-        width={500}
-      >
-        {selectedTemplate && (
-          <Alert
-            type="success"
-            style={{ marginBottom: 16 }}
-            message="本次操作预计消耗"
-            description={
-              <Space wrap>
-                {selectedTemplate.items?.map(i => (
-                  <Tag key={i.id} color="green">
-                    {i.materialName} ×{i.quantity} {i.unit}
-                  </Tag>
-                ))}
-                {selectedTemplate.items?.length === 0 && (
-                  <Text type="secondary">该消耗包暂无配置耗材</Text>
-                )}
-              </Space>
-            }
-          />
-        )}
-        <Form form={recordForm} layout="vertical">
-          <Form.Item name="templateId" hidden><Input /></Form.Item>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="deptId" label="执行科室" rules={[{ required: true }]}>
-                <Select
-                  options={departments.map(d => ({ value: d.id, label: d.deptName }))}
-                  placeholder="选择科室"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="quantity" label="执行次数" rules={[{ required: true }]}>
-                <InputNumber min={1} style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="performedAt" label="操作时间" rules={[{ required: true }]}>
-                <DatePicker showTime style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="patientInfo" label="患者信息（选填）">
-                <Input placeholder="床号或姓名" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="note" label="备注">
-            <Input.TextArea rows={2} />
-          </Form.Item>
         </Form>
       </Modal>
     </div>

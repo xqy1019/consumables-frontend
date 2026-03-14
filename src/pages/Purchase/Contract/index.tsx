@@ -60,7 +60,7 @@ export default function ContractPage() {
       setCreateOpen(false)
       form.resetFields()
       fetchData()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const handleExecute = async (id: number) => {
@@ -68,7 +68,7 @@ export default function ContractPage() {
       await purchaseApi.executeContract(id)
       message.success('合同已执行入库')
       fetchData()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const handleViewDetail = async (record: ContractVO) => {

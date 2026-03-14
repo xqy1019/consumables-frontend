@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Card, Row, Col, Radio, Table, Spin, Button, Space } from 'antd'
 import { RobotOutlined, DownloadOutlined } from '@ant-design/icons'
 import * as echarts from 'echarts'
-import { reportsApi, getExportDeptRankingUrl } from '@/api/reports'
+import { reportsApi, exportDeptRanking } from '@/api/reports'
 import { aiApi } from '@/api/ai'
 import type { DeptRanking } from '@/types'
 import type { ColumnsType } from 'antd/es/table'
@@ -128,7 +128,7 @@ export default function DeptRankingPage() {
             </Radio.Group>
             <Button
               icon={<DownloadOutlined />}
-              onClick={() => window.open(getExportDeptRankingUrl(days))}
+              onClick={async () => { await exportDeptRanking(days) }}
             >
               导出 Excel
             </Button>

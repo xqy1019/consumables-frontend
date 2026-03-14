@@ -562,7 +562,7 @@ const PermissionMatrix: React.FC = () => {
       title: r,
       dataIndex: r,
       width: 120,
-      render: (_: any, row: any) => matrix[r]?.[row.key]
+      render: (_: unknown, row: Record<string, string>) => matrix[r]?.[row.key]
         ? <CheckCircleOutlined style={{ color: '#10b981', fontSize: 16 }} />
         : <StopOutlined style={{ color: '#e2e8f0', fontSize: 16 }} />
     }))

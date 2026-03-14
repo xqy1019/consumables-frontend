@@ -45,9 +45,9 @@ export default function PredictionPage() {
   // 全量数据（用于图表，不分页）
   const fetchAllRecords = async () => {
     try {
-      const res = await aiApi.getPredictions({ page: 1, size: 500 })
+      const res = await aiApi.getPredictions({ page: 1, size: 100 })
       setAllRecords(res.records)
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const fetchSafetyStock = async () => {
@@ -60,8 +60,8 @@ export default function PredictionPage() {
     try {
       const data = await aiApi.getPredictionAccuracy()
       setAccuracyData(data)
-    } catch (e) {
-      console.error('获取预测准确率失败', e)
+    } catch {
+      // ignore
     }
   }
 
@@ -316,7 +316,7 @@ export default function PredictionPage() {
           { key: 'safety', tab: <Space><SafetyOutlined />安全库存分析</Space> },
         ]}
         activeTabKey={activeTab}
-        onTabChange={k => setActiveTab(k as any)}
+        onTabChange={k => setActiveTab(k as 'prediction' | 'safety')}
       >
         {activeTab === 'prediction' && (
           <>

@@ -121,6 +121,49 @@ export interface ParSuggestionVO {
   direction: string
 }
 
+export interface AnomalyTrendVO {
+  yearMonth: string
+  dangerCount: number
+  warningCount: number
+  totalCount: number
+}
+
+export interface ConsumptionForecastVO {
+  materialId: number
+  materialName: string
+  unit: string
+  last3Months: number[]
+  predictedQty: number
+  trend: 'UP' | 'DOWN' | 'STABLE'
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW'
+}
+
+export interface AnomalyAnalysisVO {
+  deptId: number
+  materialId: number
+  deptName: string
+  materialName: string
+  deviationRate: number
+  level: string
+  rootCause: string
+  suggestion: string
+  urgency: string
+}
+
+export interface ConsumptionSummaryVO {
+  deptId: number
+  deptName: string
+  materialId: number
+  materialName: string
+  specification: string
+  unit: string
+  requisitionQuantity: number
+  stocktakingConsumption: number | null
+  estimatedConsumption: number
+  source: string  // "盘点修正" or "申领推算"
+  yearMonth: string
+}
+
 export const smallConsumablesApi = {
   // 定数管理
   getParLevels: (deptId?: number) =>
@@ -148,6 +191,10 @@ export const smallConsumablesApi = {
   addRecord: (data: RecordRequest) =>
     request.post<unknown, RecordVO>('/small-consumables/records', data),
 
+  // 科室消耗总览
+  getConsumptionSummary: (params?: { deptId?: number; yearMonth?: string }) =>
+    request.get<unknown, ConsumptionSummaryVO[]>('/small-consumables/consumption-summary', { params }),
+
   // 消耗异常分析
   getAnomalySummary: (yearMonth?: string) =>
     request.get<unknown, AnomalySummaryVO>('/small-consumables/anomaly', {
@@ -160,12 +207,44 @@ export const smallConsumablesApi = {
 
   applyParSuggestion: (data: { deptId: number; materialId: number; suggestedPar: number; suggestedMin: number }) =>
     request.post<unknown, void>('/small-consumables/par-suggestions/apply', data),
+
+  // 异常趋势
+  getAnomalyTrend: (months?: number) =>
+    request.get<unknown, AnomalyTrendVO[]>('/small-consumables/anomaly/trend', {
+      params: { months: months || 6 },
+    }),
+
+  // AI 增强异常分析
+  getAiAnomalyAnalysis: (yearMonth?: string) =>
+    request.get<unknown, AnomalyAnalysisVO[]>('/small-consumables/anomaly/ai-analysis', {
+      params: yearMonth ? { yearMonth } : {},
+    }),
+
+  // 科室消耗预测
+  getConsumptionForecast: (deptId: number) =>
+    request.get<unknown, ConsumptionForecastVO[]>('/small-consumables/consumption-forecast', {
+      params: { deptId },
+    }),
 }
 
 const API_BASE = 'http://localhost:8081'
 
-export const getParLevelExportUrl = (deptId?: number) =>
-  `${API_BASE}/api/v1/small-consumables/par-levels/export?${deptId ? `deptId=${deptId}&` : ''}token=${localStorage.getItem('token') || ''}`
+async function getDownloadToken(): Promise<string> {
+  const res = await request.get<unknown, string>('/auth/download-token')
+  return res
+}
 
-export const getAnomalyExportUrl = (yearMonth?: string) =>
-  `${API_BASE}/api/v1/small-consumables/anomaly/export?${yearMonth ? `yearMonth=${yearMonth}&` : ''}token=${localStorage.getItem('token') || ''}`
+export const exportParLevels = async (deptId?: number) => {
+  const dt = await getDownloadToken()
+  window.open(`${API_BASE}/api/v1/small-consumables/par-levels/export?${deptId ? `deptId=${deptId}&` : ''}downloadToken=${dt}`)
+}
+
+export const exportAnomaly = async (yearMonth?: string) => {
+  const dt = await getDownloadToken()
+  window.open(`${API_BASE}/api/v1/small-consumables/anomaly/export?${yearMonth ? `yearMonth=${yearMonth}&` : ''}downloadToken=${dt}`)
+}
+
+export const exportMonthlyReport = async (yearMonth?: string) => {
+  const dt = await getDownloadToken()
+  window.open(`${API_BASE}/api/v1/small-consumables/monthly-report/export?${yearMonth ? `yearMonth=${yearMonth}&` : ''}downloadToken=${dt}`)
+}

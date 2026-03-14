@@ -76,7 +76,7 @@ export default function CreateRequisition() {
 
   const addItem = () => setItems([...items, { key: Date.now() }])
   const removeItem = (key: number) => setItems(items.filter(i => i.key !== key))
-  const updateItem = (key: number, field: string, value: any) => {
+  const updateItem = (key: number, field: string, value: string | number | null | undefined) => {
     setItems(items.map(i => i.key === key ? { ...i, [field]: value } : i))
   }
 
@@ -149,7 +149,7 @@ export default function CreateRequisition() {
       await requisitionsApi.create(buildPayload(values))
       message.success('草稿已保存')
       navigate('/requisitions')
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') } finally { setLoading(false) }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') } finally { setLoading(false) }
   }
 
   // 提交申领
@@ -170,7 +170,7 @@ export default function CreateRequisition() {
       await requisitionsApi.submit(created.id)
       message.success('申领单已提交，等待审批')
       navigate('/requisitions')
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') } finally { setLoading(false) }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') } finally { setLoading(false) }
   }
 
   const validItems = getValidItems()

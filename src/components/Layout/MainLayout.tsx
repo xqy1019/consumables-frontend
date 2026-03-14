@@ -61,6 +61,7 @@ import type { RootState } from "@/store";
 import { usePermission } from "@/hooks/usePermission";
 import styled from "styled-components";
 import { notificationsApi, type NotificationVO } from "@/api/notifications";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const { Header, Sider, Content } = Layout;
 
@@ -844,7 +845,9 @@ export default function MainLayout() {
         <StyledContent
           style={isBI ? { padding: 0, background: "#0a1428" } : undefined}
         >
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </StyledContent>
       </StyledContentLayout>
     </Layout>

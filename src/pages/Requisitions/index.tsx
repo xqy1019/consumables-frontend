@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import {
   Table, Button, Space, Select, Tag, Card, Popconfirm,
-  message, Tabs, Badge,
+  message, Tabs, Badge, Alert, Modal, Input,
 } from 'antd'
-import { PlusOutlined, EyeOutlined } from '@ant-design/icons'
+import {
+  PlusOutlined, EyeOutlined, CheckCircleOutlined,
+  BellOutlined,
+} from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
@@ -38,10 +41,15 @@ export default function RequisitionsPage() {
   const [loading, setLoading] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
   const [approvedCount, setApprovedCount] = useState(0)
+  const [dispatchedCount, setDispatchedCount] = useState(0)
   const [activeTab, setActiveTab] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [signModalOpen, setSignModalOpen] = useState(false)
+  const [signTarget, setSignTarget] = useState<Requisition | null>(null)
+  const [signRemark, setSignRemark] = useState('')
+  const [signLoading, setSignLoading] = useState(false)
   const navigate = useNavigate()
 
   const { roles, userId } = useSelector((state: RootState) => state.auth)
@@ -50,42 +58,58 @@ export default function RequisitionsPage() {
   const isDirector = roles.includes('DEPT_DIRECTOR')
   const isNurse = roles.includes('HEAD_NURSE')
   const canApprove = isAdmin || isDirector
+  const canSign = isAdmin || isNurse
 
   // 初始化默认 tab
   useEffect(() => {
     if (canApprove) setActiveTab('pending')
-    else if (isKeeper) setActiveTab('approved')  // 库管员默认看「待发放」
-    else if (isNurse) setActiveTab('mine')
+    else if (isKeeper) setActiveTab('approved')
+    else if (isNurse) setActiveTab('toSign')  // 护士长默认看待签收
     else setActiveTab('all')
   }, [roles])
 
-  // 获取待审批数量（用于徽标）
+  // 获取各状态徽标数量
   useEffect(() => {
     if (canApprove) {
       requisitionsApi.getList({ status: 'PENDING', page: 1, size: 1 })
-        .then(res => setPendingCount(res.total))
-        .catch(() => {})
+        .then(res => setPendingCount(res.total)).catch(() => {})
+    }
+    if (isAdmin || isKeeper) {
+      requisitionsApi.getList({ status: 'APPROVED', page: 1, size: 1 })
+        .then(res => setApprovedCount(res.total)).catch(() => {})
+    }
+    if (canSign) {
+      requisitionsApi.getList({ status: 'DISPATCHED', page: 1, size: 1 })
+        .then(res => setDispatchedCount(res.total)).catch(() => {})
     }
   }, [roles])
 
-  // 获取待发放数量（用于徽标）
-  useEffect(() => {
+  const refreshBadges = () => {
+    if (canApprove) {
+      requisitionsApi.getList({ status: 'PENDING', page: 1, size: 1 })
+        .then(r => setPendingCount(r.total)).catch(() => {})
+    }
     if (isAdmin || isKeeper) {
       requisitionsApi.getList({ status: 'APPROVED', page: 1, size: 1 })
-        .then(res => setApprovedCount(res.total))
-        .catch(() => {})
+        .then(r => setApprovedCount(r.total)).catch(() => {})
     }
-  }, [roles])
+    if (canSign) {
+      requisitionsApi.getList({ status: 'DISPATCHED', page: 1, size: 1 })
+        .then(r => setDispatchedCount(r.total)).catch(() => {})
+    }
+  }
 
   const fetchData = async (tab = activeTab, status = statusFilter, pg = page, sz = pageSize) => {
     if (!tab) return
     setLoading(true)
     try {
-      const params: any = { page: pg, size: sz }
+      const params: Record<string, string | number> = { page: pg, size: sz }
       if (tab === 'pending') {
         params.status = 'PENDING'
       } else if (tab === 'approved') {
         params.status = 'APPROVED'
+      } else if (tab === 'toSign') {
+        params.status = 'DISPATCHED'
       } else if (tab === 'mine') {
         if (userId) params.createdBy = userId
         if (status) params.status = status
@@ -95,15 +119,7 @@ export default function RequisitionsPage() {
       const res = await requisitionsApi.getList(params)
       setData(res.records)
       setTotal(res.total)
-      // 刷新徽标计数
-      if (canApprove) {
-        requisitionsApi.getList({ status: 'PENDING', page: 1, size: 1 })
-          .then(r => setPendingCount(r.total)).catch(() => {})
-      }
-      if (isAdmin || isKeeper) {
-        requisitionsApi.getList({ status: 'APPROVED', page: 1, size: 1 })
-          .then(r => setApprovedCount(r.total)).catch(() => {})
-      }
+      refreshBadges()
     } finally { setLoading(false) }
   }
 
@@ -121,9 +137,27 @@ export default function RequisitionsPage() {
     await requisitionsApi.submit(id)
     message.success('提交成功')
     fetchData()
-    if (canApprove) {
-      requisitionsApi.getList({ status: 'PENDING', page: 1, size: 1 })
-        .then(res => setPendingCount(res.total))
+  }
+
+  const openSignModal = (record: Requisition) => {
+    setSignTarget(record)
+    setSignRemark('')
+    setSignModalOpen(true)
+  }
+
+  const handleSign = async () => {
+    if (!signTarget) return
+    setSignLoading(true)
+    try {
+      await requisitionsApi.sign(signTarget.id, { remark: signRemark || undefined })
+      message.success('签收成功')
+      setSignModalOpen(false)
+      setSignTarget(null)
+      fetchData()
+    } catch {
+      // 错误由拦截器处理
+    } finally {
+      setSignLoading(false)
     }
   }
 
@@ -147,7 +181,7 @@ export default function RequisitionsPage() {
     },
     { title: '备注', dataIndex: 'remark', ellipsis: true },
     {
-      title: '操作', width: 130, fixed: 'right',
+      title: '操作', width: 160, fixed: 'right',
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EyeOutlined />}
@@ -158,6 +192,17 @@ export default function RequisitionsPage() {
             <Popconfirm title="确认提交审批？" onConfirm={() => handleSubmit(record.id)}>
               <Button size="small" type="primary">提交</Button>
             </Popconfirm>
+          )}
+          {record.status === 'DISPATCHED' && canSign && (
+            <Button
+              size="small"
+              type="primary"
+              icon={<CheckCircleOutlined />}
+              style={{ background: '#10b981', borderColor: '#10b981' }}
+              onClick={() => openSignModal(record)}
+            >
+              签收
+            </Button>
           )}
         </Space>
       ),
@@ -191,6 +236,25 @@ export default function RequisitionsPage() {
     />
   )
 
+  // 待签收提醒横幅（护士长 / 管理员看到）
+  const signBanner = canSign && dispatchedCount > 0 && activeTab !== 'toSign' ? (
+    <Alert
+      type="info"
+      showIcon
+      icon={<BellOutlined />}
+      style={{ marginBottom: 16, borderRadius: 10 }}
+      message={
+        <span>
+          您有 <strong style={{ color: '#6366f1' }}>{dispatchedCount}</strong> 笔申领单已发放，请及时签收确认
+          <Button type="link" size="small" style={{ paddingLeft: 8 }}
+            onClick={() => handleTabChange('toSign')}>
+            去签收
+          </Button>
+        </span>
+      }
+    />
+  ) : null
+
   // 构建 Tabs 列表（按角色显示）
   const tabItems = []
 
@@ -202,15 +266,11 @@ export default function RequisitionsPage() {
           <span style={{ paddingRight: pendingCount > 0 ? 12 : 0 }}>待我审批</span>
         </Badge>
       ),
-      children: (
-        <div>
-          {table}
-        </div>
-      ),
+      children: <div>{table}</div>,
     })
   }
 
-  // 库管员「待发放」Tab：显示所有已审批待派发的申领单
+  // 库管员「待发放」Tab
   if (isAdmin || isKeeper) {
     tabItems.push({
       key: 'approved',
@@ -219,11 +279,20 @@ export default function RequisitionsPage() {
           <span style={{ paddingRight: approvedCount > 0 ? 12 : 0 }}>待发放</span>
         </Badge>
       ),
-      children: (
-        <div>
-          {table}
-        </div>
+      children: <div>{table}</div>,
+    })
+  }
+
+  // 护士长 / 管理员「待签收」Tab
+  if (canSign) {
+    tabItems.push({
+      key: 'toSign',
+      label: (
+        <Badge count={dispatchedCount} size="small" offset={[6, -2]}>
+          <span style={{ paddingRight: dispatchedCount > 0 ? 12 : 0 }}>待签收</span>
+        </Badge>
       ),
+      children: <div>{table}</div>,
     })
   }
 
@@ -257,7 +326,7 @@ export default function RequisitionsPage() {
     })
   }
 
-  // 只有一个 tab（如护士长）时不显示 Tabs，直接展示
+  // 只有一个 tab 时不显示 Tabs
   if (tabItems.length === 0) {
     tabItems.push({
       key: 'mine',
@@ -288,6 +357,7 @@ export default function RequisitionsPage() {
           )
         }
       >
+        {signBanner}
         {tabItems.length === 1 ? (
           <>
             <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'flex-end' }}>
@@ -303,6 +373,46 @@ export default function RequisitionsPage() {
           />
         )}
       </Card>
+
+      {/* 签收确认弹窗 */}
+      <Modal
+        title={
+          <Space>
+            <CheckCircleOutlined style={{ color: '#10b981' }} />
+            确认签收
+          </Space>
+        }
+        open={signModalOpen}
+        onCancel={() => { setSignModalOpen(false); setSignTarget(null) }}
+        onOk={handleSign}
+        confirmLoading={signLoading}
+        okText="确认签收"
+        okButtonProps={{ style: { background: '#10b981', borderColor: '#10b981' } }}
+      >
+        {signTarget && (
+          <div style={{ marginBottom: 16, padding: '12px 16px', background: '#f8fafc', borderRadius: 8 }}>
+            <div style={{ marginBottom: 4 }}>
+              <strong>申领单号：</strong>{signTarget.requisitionNo}
+            </div>
+            <div style={{ marginBottom: 4 }}>
+              <strong>申领科室：</strong>{signTarget.deptName}
+            </div>
+            <div>
+              <strong>耗材明细：</strong>
+              {signTarget.items?.map(item => `${item.materialName} ×${item.quantity}`).join('、') || '-'}
+            </div>
+          </div>
+        )}
+        <div style={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}>
+          请确认已收到发放的耗材且数量无误，签收后状态将变为「已签收」。
+        </div>
+        <Input.TextArea
+          rows={2}
+          placeholder="签收备注（可选，如：实收数量与申领一致）"
+          value={signRemark}
+          onChange={e => setSignRemark(e.target.value)}
+        />
+      </Modal>
     </div>
   )
 }

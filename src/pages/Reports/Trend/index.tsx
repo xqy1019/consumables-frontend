@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Card, Radio, Spin, Button, Space } from 'antd'
 import { RobotOutlined, DownloadOutlined } from '@ant-design/icons'
 import * as echarts from 'echarts'
-import { reportsApi, getExportConsumptionTrendUrl } from '@/api/reports'
+import { reportsApi, exportConsumptionTrend } from '@/api/reports'
 import { aiApi } from '@/api/ai'
 import type { ConsumptionTrend } from '@/types'
 import AiAnalysisPanel from '@/components/AiAnalysisPanel'
@@ -109,7 +109,7 @@ export default function TrendPage() {
             </Radio.Group>
             <Button
               icon={<DownloadOutlined />}
-              onClick={() => window.open(getExportConsumptionTrendUrl(months))}
+              onClick={async () => { await exportConsumptionTrend(months) }}
             >
               导出 Excel
             </Button>

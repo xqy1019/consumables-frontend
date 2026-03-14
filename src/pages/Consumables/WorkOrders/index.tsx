@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   Card, Table, Tag, Button, Space, Modal, Form, Input, Select,
   Statistic, Row, Col, Badge, Descriptions, Timeline, message, Popconfirm,
@@ -6,12 +6,17 @@ import {
 import {
   PlusOutlined, CheckCircleOutlined, CloseCircleOutlined,
   UserOutlined, CommentOutlined, ExclamationCircleOutlined, DownloadOutlined,
+  TeamOutlined, StopOutlined,
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import type { TableRowSelection } from 'antd/es/table/interface'
 import {
-  anomalyWorkOrderApi, getWorkOrderExportUrl,
+  anomalyWorkOrderApi, exportWorkOrders,
   type WorkOrderVO, type WorkOrderStatsVO, type CreateWorkOrderInput,
 } from '@/api/anomalyWorkOrder'
+import { departmentsApi, usersApi } from '@/api/system'
+import { materialsApi } from '@/api/materials'
+import type { Department, Material, User } from '@/types'
 import dayjs from 'dayjs'
 
 const STATUS_MAP: Record<string, { text: string; color: string }> = {
@@ -29,6 +34,9 @@ const PRIORITY_MAP: Record<string, { text: string; color: string }> = {
 
 export default function WorkOrdersPage() {
   const [orders, setOrders] = useState<WorkOrderVO[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
   const [stats, setStats] = useState<WorkOrderStatsVO | null>(null)
   const [loading, setLoading] = useState(false)
   const [detailVisible, setDetailVisible] = useState(false)
@@ -40,28 +48,42 @@ export default function WorkOrdersPage() {
   const [comment, setComment] = useState('')
   const [commentLoading, setCommentLoading] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined)
+  const [deptFilter, setDeptFilter] = useState<number | undefined>(undefined)
+  const [priorityFilter, setPriorityFilter] = useState<string | undefined>(undefined)
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
+  const [batchAssignVisible, setBatchAssignVisible] = useState(false)
+  const [batchAssigneeId, setBatchAssigneeId] = useState<string>('')
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [materials, setMaterials] = useState<Material[]>([])
+  const [users, setUsers] = useState<User[]>([])
   const [createForm] = Form.useForm()
 
-  const fetchData = async () => {
+  useEffect(() => {
+    departmentsApi.getAll().then(setDepartments).catch(() => {})
+    materialsApi.getActive().then(setMaterials).catch(() => {})
+    usersApi.getList({ page: 1, size: 100 }).then(res => setUsers(res.records)).catch(() => {})
+  }, [])
+
+  const fetchData = useCallback(async (p = page, s = pageSize) => {
     setLoading(true)
     try {
-      const [ordersData, statsData] = await Promise.all([
-        anomalyWorkOrderApi.getAll(),
+      const params: { page: number; size: number; deptId?: number; priority?: string; status?: string } = { page: p, size: s }
+      if (deptFilter) params.deptId = deptFilter
+      if (priorityFilter) params.priority = priorityFilter
+      if (statusFilter) params.status = statusFilter
+      const [pageData, statsData] = await Promise.all([
+        anomalyWorkOrderApi.getAll(params),
         anomalyWorkOrderApi.getStats(),
       ])
-      setOrders(ordersData)
+      setOrders(pageData.records)
+      setTotal(pageData.total)
       setStats(statsData)
     } catch { /* ignore */ } finally {
       setLoading(false)
     }
-  }
+  }, [page, pageSize, deptFilter, priorityFilter, statusFilter])
 
-  useEffect(() => { fetchData() }, [])
-
-  const filteredOrders = useMemo(() => {
-    if (!statusFilter) return orders
-    return orders.filter(o => o.status === statusFilter)
-  }, [orders, statusFilter])
+  useEffect(() => { fetchData() }, [fetchData])
 
   const showDetail = async (id: number) => {
     try {
@@ -122,6 +144,36 @@ export default function WorkOrdersPage() {
     } catch { /* ignore */ } finally {
       setCommentLoading(false)
     }
+  }
+
+  const handleBatchAssign = async () => {
+    const id = Number(batchAssigneeId)
+    if (!id || isNaN(id)) {
+      message.error('请输入有效的用户ID')
+      return
+    }
+    try {
+      const count = await anomalyWorkOrderApi.batchAssign(selectedRowKeys.map(Number), id)
+      message.success(`成功分配 ${count} 个工单`)
+      setBatchAssignVisible(false)
+      setBatchAssigneeId('')
+      setSelectedRowKeys([])
+      fetchData()
+    } catch { /* ignore */ }
+  }
+
+  const handleBatchClose = async () => {
+    try {
+      const count = await anomalyWorkOrderApi.batchClose(selectedRowKeys.map(Number))
+      message.success(`成功关闭 ${count} 个工单（仅已解决状态的工单会被关闭）`)
+      setSelectedRowKeys([])
+      fetchData()
+    } catch { /* ignore */ }
+  }
+
+  const rowSelection: TableRowSelection<WorkOrderVO> = {
+    selectedRowKeys,
+    onChange: (keys) => setSelectedRowKeys(keys),
   }
 
   const columns: ColumnsType<WorkOrderVO> = [
@@ -193,32 +245,32 @@ export default function WorkOrdersPage() {
       {/* 统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={5}>
-          <Card size="small" hoverable onClick={() => setStatusFilter(undefined)}
+          <Card size="small" hoverable onClick={() => { setStatusFilter(undefined); setPage(1) }}
             style={!statusFilter ? { borderColor: '#1890ff' } : undefined}>
             <Statistic title="全部工单" value={stats?.total || 0} />
           </Card>
         </Col>
         <Col span={5}>
-          <Card size="small" hoverable onClick={() => setStatusFilter('OPEN')}
+          <Card size="small" hoverable onClick={() => { setStatusFilter('OPEN'); setPage(1) }}
             style={statusFilter === 'OPEN' ? { borderColor: '#ff4d4f' } : undefined}>
             <Statistic title="待处理" value={stats?.open || 0}
               valueStyle={{ color: (stats?.open || 0) > 0 ? '#ff4d4f' : undefined }} />
           </Card>
         </Col>
         <Col span={5}>
-          <Card size="small" hoverable onClick={() => setStatusFilter('IN_PROGRESS')}
+          <Card size="small" hoverable onClick={() => { setStatusFilter('IN_PROGRESS'); setPage(1) }}
             style={statusFilter === 'IN_PROGRESS' ? { borderColor: '#1890ff' } : undefined}>
             <Statistic title="处理中" value={stats?.inProgress || 0} valueStyle={{ color: '#1890ff' }} />
           </Card>
         </Col>
         <Col span={5}>
-          <Card size="small" hoverable onClick={() => setStatusFilter('RESOLVED')}
+          <Card size="small" hoverable onClick={() => { setStatusFilter('RESOLVED'); setPage(1) }}
             style={statusFilter === 'RESOLVED' ? { borderColor: '#52c41a' } : undefined}>
             <Statistic title="已解决" value={stats?.resolved || 0} valueStyle={{ color: '#52c41a' }} />
           </Card>
         </Col>
         <Col span={4}>
-          <Card size="small" hoverable onClick={() => setStatusFilter('CLOSED')}
+          <Card size="small" hoverable onClick={() => { setStatusFilter('CLOSED'); setPage(1) }}
             style={statusFilter === 'CLOSED' ? { borderColor: '#999' } : undefined}>
             <Statistic title="已关闭" value={stats?.closed || 0} />
           </Card>
@@ -230,7 +282,48 @@ export default function WorkOrdersPage() {
         title={<><ExclamationCircleOutlined /> 异常处理工单{statusFilter ? ` - ${STATUS_MAP[statusFilter]?.text}` : ''}</>}
         extra={
           <Space>
-            <Button icon={<DownloadOutlined />} onClick={() => window.open(getWorkOrderExportUrl())}>
+            <Select
+              placeholder="科室筛选"
+              allowClear
+              style={{ width: 140 }}
+              value={deptFilter}
+              onChange={(v) => { setDeptFilter(v); setPage(1) }}
+              showSearch
+              optionFilterProp="label"
+              options={departments.map(d => ({ value: d.id, label: d.deptName }))}
+            />
+            <Select
+              placeholder="优先级筛选"
+              allowClear
+              style={{ width: 120 }}
+              value={priorityFilter}
+              onChange={(v) => { setPriorityFilter(v); setPage(1) }}
+              options={[
+                { value: 'HIGH', label: '高' },
+                { value: 'NORMAL', label: '中' },
+                { value: 'LOW', label: '低' },
+              ]}
+            />
+            <Button
+              icon={<TeamOutlined />}
+              disabled={selectedRowKeys.length === 0}
+              onClick={() => setBatchAssignVisible(true)}
+            >
+              批量分配
+            </Button>
+            <Popconfirm
+              title={`确认批量关闭选中的 ${selectedRowKeys.length} 个工单？（仅已解决状态会被关闭）`}
+              onConfirm={handleBatchClose}
+              disabled={selectedRowKeys.length === 0}
+            >
+              <Button
+                icon={<StopOutlined />}
+                disabled={selectedRowKeys.length === 0}
+              >
+                批量关闭
+              </Button>
+            </Popconfirm>
+            <Button icon={<DownloadOutlined />} onClick={async () => { await exportWorkOrders() }}>
               导出
             </Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateVisible(true)}>
@@ -241,11 +334,16 @@ export default function WorkOrdersPage() {
       >
         <Table
           columns={columns}
-          dataSource={filteredOrders}
+          dataSource={orders}
           rowKey="id"
           loading={loading}
+          rowSelection={rowSelection}
           scroll={{ x: 1000 }}
-          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: t => `共 ${t} 条` }}
+          pagination={{
+            current: page, pageSize, total,
+            showSizeChanger: true, showTotal: t => `共 ${t} 条`,
+            onChange: (p, s) => { setPage(p); setPageSize(s) },
+          }}
         />
       </Card>
 
@@ -258,11 +356,21 @@ export default function WorkOrdersPage() {
         width={500}
       >
         <Form form={createForm} layout="vertical">
-          <Form.Item name="deptId" label="科室ID" rules={[{ required: true }]}>
-            <Input type="number" placeholder="科室ID" />
+          <Form.Item name="deptId" label="科室" rules={[{ required: true, message: '请选择科室' }]}>
+            <Select
+              placeholder="请选择科室"
+              showSearch
+              optionFilterProp="label"
+              options={departments.map(d => ({ value: d.id, label: d.deptName }))}
+            />
           </Form.Item>
-          <Form.Item name="materialId" label="耗材ID" rules={[{ required: true }]}>
-            <Input type="number" placeholder="耗材ID" />
+          <Form.Item name="materialId" label="耗材" rules={[{ required: true, message: '请选择耗材' }]}>
+            <Select
+              placeholder="请选择耗材"
+              showSearch
+              optionFilterProp="label"
+              options={materials.map(m => ({ value: m.id, label: `${m.materialName} (${m.specification})` }))}
+            />
           </Form.Item>
           <Form.Item name="anomalyType" label="异常类型" rules={[{ required: true }]}>
             <Select options={[
@@ -395,6 +503,24 @@ export default function WorkOrdersPage() {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* 批量分配弹窗 */}
+      <Modal
+        title={`批量分配工单（已选 ${selectedRowKeys.length} 个）`}
+        open={batchAssignVisible}
+        onOk={handleBatchAssign}
+        onCancel={() => { setBatchAssignVisible(false); setBatchAssigneeId('') }}
+      >
+        <Select
+          value={batchAssigneeId || undefined}
+          onChange={(v: string) => setBatchAssigneeId(String(v))}
+          placeholder="请选择负责人"
+          showSearch
+          optionFilterProp="label"
+          style={{ width: '100%' }}
+          options={users.map(u => ({ value: String(u.id), label: `${u.realName} (${u.username})` }))}
+        />
       </Modal>
     </div>
   )

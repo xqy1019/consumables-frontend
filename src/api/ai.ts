@@ -41,7 +41,7 @@ export interface PredictionAccuracyVO {
   avgAccuracyRate: number
   evaluatedCount: number
   worstMaterials?: MaterialAccuracy[]
-  predictions?: any[]
+  predictions?: PredictionVO[]
 }
 
 export const aiApi = {

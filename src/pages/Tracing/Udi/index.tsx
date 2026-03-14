@@ -60,7 +60,7 @@ export default function UdiPage() {
       setCreateOpen(false)
       form.resetFields()
       fetchData()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') }
   }
 
   const handleScan = async () => {

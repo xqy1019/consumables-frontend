@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react'
 import {
   Card, Row, Col, Statistic, Table, Tag, Select, DatePicker, Button,
-  Space, Alert, Progress, Typography, theme,
+  Space, Alert, Progress, Typography, theme, message, Tooltip,
 } from 'antd'
 import {
   WarningOutlined, RiseOutlined, CheckCircleOutlined, FireOutlined, DownloadOutlined,
+  RobotOutlined, PlusOutlined,
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
-import { smallConsumablesApi, getAnomalyExportUrl, type AnomalyVO, type AnomalySummaryVO } from '@/api/smallConsumables'
+import { smallConsumablesApi, exportAnomaly, type AnomalyVO, type AnomalySummaryVO, type AnomalyTrendVO, type AnomalyAnalysisVO } from '@/api/smallConsumables'
+import { anomalyWorkOrderApi } from '@/api/anomalyWorkOrder'
 import { departmentsApi } from '@/api/system'
 import type { Department } from '@/types'
 
@@ -27,15 +29,60 @@ export default function AnomalyPage() {
   const [yearMonth, setYearMonth] = useState<string>(dayjs().format('YYYY-MM'))
   const [deptFilter, setDeptFilter] = useState<number>()
   const [departments, setDepartments] = useState<Department[]>([])
+  const [anomalyTrend, setAnomalyTrend] = useState<AnomalyTrendVO[]>([])
+  const [aiAnalysis, setAiAnalysis] = useState<AnomalyAnalysisVO[]>([])
+  const [aiLoading, setAiLoading] = useState(false)
+  const [creatingOrderKey, setCreatingOrderKey] = useState<string | null>(null)
   const { token } = theme.useToken()
 
   const load = async () => {
     setLoading(true)
     try {
-      const res = await smallConsumablesApi.getAnomalySummary(yearMonth)
+      const [res, trendData] = await Promise.all([
+        smallConsumablesApi.getAnomalySummary(yearMonth),
+        smallConsumablesApi.getAnomalyTrend(6),
+      ])
       setSummary(res)
+      setAnomalyTrend(trendData)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadAiAnalysis = async () => {
+    setAiLoading(true)
+    try {
+      const res = await smallConsumablesApi.getAiAnomalyAnalysis(yearMonth)
+      setAiAnalysis(res)
+      message.success(`AI 分析完成，共 ${res.length} 条结果`)
+    } catch {
+      message.error('AI 分析请求失败')
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  // 根据 deptId + materialId 查找 AI 分析结果
+  const getAiResult = (deptId: number, materialId: number): AnomalyAnalysisVO | undefined =>
+    aiAnalysis.find(a => a.deptId === deptId && a.materialId === materialId)
+
+  const handleCreateWorkOrder = async (record: AnomalyVO) => {
+    const key = `${record.deptId}_${record.materialId}`
+    setCreatingOrderKey(key)
+    try {
+      await anomalyWorkOrderApi.create({
+        deptId: record.deptId,
+        materialId: record.materialId,
+        anomalyType: record.level === 'DANGER' ? 'DANGER' : 'WARNING',
+        deviationRate: record.deviationRate / 100,
+        description: `${record.deptName}-${record.materialName} 消耗异常，偏差率+${record.deviationRate}%`,
+        priority: record.level === 'DANGER' ? 'HIGH' : 'NORMAL',
+      })
+      message.success('工单创建成功')
+    } catch {
+      message.error('工单创建失败')
+    } finally {
+      setCreatingOrderKey(null)
     }
   }
 
@@ -43,7 +90,7 @@ export default function AnomalyPage() {
     departmentsApi.getAll().then(setDepartments).catch(() => {})
   }, [])
 
-  useEffect(() => { load() }, [yearMonth])
+  useEffect(() => { load(); setAiAnalysis([]) }, [yearMonth])
 
   const filteredAnomalies = summary?.anomalies.filter(a =>
     deptFilter ? a.deptId === deptFilter : true
@@ -244,6 +291,54 @@ export default function AnomalyPage() {
         )
       },
     },
+    ...(aiAnalysis.length > 0 ? [
+      {
+        title: 'AI 根因', width: 200,
+        render: (_: unknown, r: AnomalyVO) => {
+          const ai = getAiResult(r.deptId, r.materialId)
+          if (!ai) return <Text type="secondary">--</Text>
+          const urgencyColor = ai.urgency === 'HIGH' ? 'red' : ai.urgency === 'MEDIUM' ? 'orange' : 'green'
+          return (
+            <Space direction="vertical" size={2}>
+              <Tag color={urgencyColor}>{ai.urgency}</Tag>
+              <Tooltip title={ai.rootCause}>
+                <Text style={{ fontSize: 12 }}>{ai.rootCause}</Text>
+              </Tooltip>
+            </Space>
+          )
+        },
+      },
+      {
+        title: 'AI 建议', width: 200,
+        render: (_: unknown, r: AnomalyVO) => {
+          const ai = getAiResult(r.deptId, r.materialId)
+          if (!ai) return <Text type="secondary">--</Text>
+          return (
+            <Tooltip title={ai.suggestion}>
+              <Text style={{ fontSize: 12 }}>{ai.suggestion}</Text>
+            </Tooltip>
+          )
+        },
+      },
+    ] as ColumnsType<AnomalyVO> : []),
+    {
+      title: '操作', width: 110, fixed: 'right',
+      render: (_: unknown, r: AnomalyVO) => {
+        if (r.level !== 'DANGER' && r.level !== 'WARNING') return null
+        const key = `${r.deptId}_${r.materialId}`
+        return (
+          <Button
+            type="link"
+            size="small"
+            icon={<PlusOutlined />}
+            loading={creatingOrderKey === key}
+            onClick={() => handleCreateWorkOrder(r)}
+          >
+            创建工单
+          </Button>
+        )
+      },
+    },
   ]
 
   return (
@@ -293,6 +388,55 @@ export default function AnomalyPage() {
           </Card>
         </Col>
       </Row>
+
+      {/* 异常趋势（近6个月） */}
+      {anomalyTrend.length > 0 && (
+        <Card
+          title={<Space><RiseOutlined style={{ color: '#1890ff' }} /><span>异常趋势（近6个月）</span></Space>}
+          size="small"
+          bordered={false}
+          style={{ borderRadius: 10, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: 16 }}
+        >
+          <ReactECharts
+            style={{ height: 240 }}
+            option={{
+              tooltip: { trigger: 'axis' as const },
+              legend: { data: ['严重超标', '偏高预警'], bottom: 0 },
+              grid: { left: 40, right: 20, top: 16, bottom: 36 },
+              xAxis: {
+                type: 'category' as const,
+                data: anomalyTrend.map(t => t.yearMonth),
+                boundaryGap: false,
+                axisLabel: { fontSize: 11, color: token.colorTextSecondary },
+              },
+              yAxis: {
+                type: 'value' as const,
+                minInterval: 1,
+                axisLabel: { fontSize: 11, color: token.colorTextSecondary },
+                splitLine: { lineStyle: { type: 'dashed', color: token.colorBorderSecondary } },
+              },
+              series: [
+                {
+                  name: '严重超标', type: 'line', stack: 'total',
+                  areaStyle: { opacity: 0.25 },
+                  lineStyle: { color: '#ff4d4f', width: 2 },
+                  itemStyle: { color: '#ff4d4f' },
+                  data: anomalyTrend.map(t => t.dangerCount),
+                  smooth: true,
+                },
+                {
+                  name: '偏高预警', type: 'line', stack: 'total',
+                  areaStyle: { opacity: 0.25 },
+                  lineStyle: { color: '#faad14', width: 2 },
+                  itemStyle: { color: '#faad14' },
+                  data: anomalyTrend.map(t => t.warningCount),
+                  smooth: true,
+                },
+              ],
+            }}
+          />
+        </Card>
+      )}
 
       {/* 图表区 —— 有异常时才渲染 */}
       {filteredAnomalies.length > 0 && (
@@ -350,7 +494,16 @@ export default function AnomalyPage() {
               options={departments.map(d => ({ value: d.id, label: d.deptName }))}
               onChange={setDeptFilter}
             />
-            <Button icon={<DownloadOutlined />} onClick={() => window.open(getAnomalyExportUrl(yearMonth))}>
+            <Button
+              icon={<RobotOutlined />}
+              type={aiAnalysis.length > 0 ? 'default' : 'primary'}
+              loading={aiLoading}
+              onClick={loadAiAnalysis}
+              disabled={filteredAnomalies.length === 0}
+            >
+              AI 分析
+            </Button>
+            <Button icon={<DownloadOutlined />} onClick={async () => { await exportAnomaly(yearMonth) }}>
               导出
             </Button>
           </Space>

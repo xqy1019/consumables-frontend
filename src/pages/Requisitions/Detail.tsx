@@ -96,7 +96,7 @@ export default function RequisitionDetail() {
       message.success('审批通过')
       setApproveModal(false)
       fetchData()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') } finally { setActionLoading(false) }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') } finally { setActionLoading(false) }
   }
 
   const handleReject = async () => {
@@ -106,7 +106,7 @@ export default function RequisitionDetail() {
       message.success('已驳回')
       setRejectModal(false)
       fetchData()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') } finally { setActionLoading(false) }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') } finally { setActionLoading(false) }
   }
 
   const handleDispatch = async () => {
@@ -115,7 +115,7 @@ export default function RequisitionDetail() {
       await requisitionsApi.dispatch(Number(id))
       message.success('已发放')
       fetchData()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') } finally { setActionLoading(false) }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') } finally { setActionLoading(false) }
   }
 
   const handleSign = async () => {
@@ -125,7 +125,7 @@ export default function RequisitionDetail() {
       message.success('签收成功')
       setSignModal(false)
       fetchData()
-    } catch (e: any) { message.error(e?.message || '操作失败，请重试') } finally { setActionLoading(false) }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '操作失败，请重试') } finally { setActionLoading(false) }
   }
 
   if (loading) return (

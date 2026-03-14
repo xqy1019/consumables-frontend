@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Card, Row, Col, Radio, Spin, Statistic, Button, Space } from 'antd'
 import { RobotOutlined, DownloadOutlined } from '@ant-design/icons'
 import * as echarts from 'echarts'
-import { reportsApi, getExportCostAnalysisUrl } from '@/api/reports'
+import { reportsApi, exportCostAnalysis } from '@/api/reports'
 import { aiApi } from '@/api/ai'
 import type { CostAnalysis } from '@/types'
 import AiAnalysisPanel from '@/components/AiAnalysisPanel'
@@ -125,7 +125,7 @@ export default function CostAnalysisPage() {
             </Radio.Group>
             <Button
               icon={<DownloadOutlined />}
-              onClick={() => window.open(getExportCostAnalysisUrl(months))}
+              onClick={async () => { await exportCostAnalysis(months) }}
             >
               导出 Excel
             </Button>

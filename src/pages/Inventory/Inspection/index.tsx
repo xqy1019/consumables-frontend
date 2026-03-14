@@ -63,8 +63,8 @@ export default function InspectionPage() {
       message.success('验收操作成功')
       setInspectOpen(false)
       fetchData()
-    } catch (e: any) {
-      message.error(e?.message || '操作失败')
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '操作失败')
     } finally {
       setSubmitting(false)
     }
